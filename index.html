@@ -1,0 +1,2332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Army Map Simulator</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com" onerror="console.error('Failed to load Tailwind CSS. Please check your internet connection or CDN availability.');"></script>
+    <style>
+        /* Custom styles for the canvas and overall layout */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light blue-gray background */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box; /* Changed to border-box for consistent padding */
+        }
+        canvas {
+            background-color: #e2e8f0; /* Lighter blue-gray for map background */
+            border: 5px solid #4a5568; /* Darker slate border for prominence */
+            display: block;
+            margin: 20px auto;
+            border-radius: 8px; /* Rounded corners for the canvas */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Soft shadow */
+            max-width: 90%; /* Ensure responsiveness */
+            height: auto;
+        }
+        .control-panel {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            gap: 10px;
+            margin: 20px auto; /* Center the control panel */
+            justify-content: center;
+            padding: 10px;
+            background-color: #ffffff; /* White background for controls */
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            max-width: 800px; /* Limit width for better layout */
+        }
+        .control-button {
+            padding: 10px 18px;
+            border-radius: 9999px; /* Fully rounded buttons */
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: none; /* Remove default button border */
+        }
+        .control-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        .control-button:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Specific button styles */
+        .btn-primary {
+            background-color: #3b82f6; /* Blue */
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb; /* Darker blue */
+        }
+        .btn-secondary {
+            background-color: #6b7280; /* Gray */
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #4b5563; /* Darker gray */
+        }
+        .btn-danger {
+            background-color: #ef4444; /* Red */
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626; /* Darker red */
+        }
+        .btn-success {
+            background-color: #22c55e; /* Green */
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #16a34a; /* Darker green */
+        }
+        /* New styles for friendly/enemy buttons */
+        .btn-friendly {
+            background-color: #34d399; /* Light green */
+            color: white;
+        }
+        .btn-friendly:hover {
+            background-color: #10b981; /* Darker light green */
+        }
+        .btn-enemy {
+            background-color: #f87171; /* Light red */
+            color: white;
+        }
+        .btn-enemy:hover {
+            background-color: #ef4444; /* Darker light red */
+        }
+        /* New style for artillery buttons */
+        .btn-artillery {
+            background-color: #8b5cf6; /* Violet */
+            color: white;
+        }
+        .btn-artillery:hover {
+            background-color: #7c3aed; /* Darker violet */
+        }
+        /* New style for auto-place buttons */
+        .btn-auto-place {
+            background-color: #f97316; /* Orange */
+            color: white;
+        }
+        .btn-auto-place:hover {
+            background-color: #ea580c; /* Darker orange */
+        }
+        /* New style for army control buttons */
+        .btn-army-control {
+            background-color: #60a5fa; /* Light blue */
+            color: white;
+        }
+        .btn-army-control:hover {
+            background-color: #3b82f6; /* Darker light blue */
+        }
+
+
+
+        /* Dropdown styling */
+        .army-selector-container {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 8px 12px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .army-selector-container label {
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+        .army-selector-container select {
+            padding: 6px 10px;
+            border: 1px solid #a0aec0;
+            border-radius: 5px;
+            background-color: #ffffff;
+            font-size: 0.9rem;
+            color: #2d3748;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+        .army-selector-container select:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+
+        /* Message box styling */
+        .message-box {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            max-width: 300px;
+            text-align: center;
+        }
+        .message-box button {
+            background-color: #3b82f6;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .message-box button:hover {
+            background-color: #2563eb;
+        }
+
+        /* Troop counter display */
+        .troop-counters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            width: 90%;
+            max-width: 800px;
+            justify-content: center;
+        }
+        .troop-counter-item {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #475569; /* Slate gray */
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .troop-counter-item span {
+            font-weight: 700;
+            color: #1e293b; /* Darker slate */
+        }
+
+        /* Leaderboard styling */
+        .leaderboard-container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            padding: 15px; /* Reduced padding */
+            margin-top: 20px;
+            width: 90%;
+            max-width: 250px; /* Reduced max-width */
+            text-align: center;
+        }
+        .leaderboard-container h2 {
+            font-size: 1.3rem; /* Slightly smaller font */
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 10px; /* Reduced margin */
+        }
+        .leaderboard-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0; /* Reduced padding */
+            border-bottom: 1px dashed #e2e8f0; /* Subtle separator */
+            font-size: 0.9rem; /* Slightly smaller font */
+            color: #334155; /* Darker gray for text */
+            cursor: default; /* Leaderboard entries are informational */
+        }
+        .leaderboard-item:last-child {
+            border-bottom: none; /* No border for the last item */
+        }
+        .leaderboard-item .rank {
+            font-weight: 700;
+            width: 25px; /* Adjusted width */
+            text-align: left;
+        }
+        .leaderboard-item .unit-info {
+            flex-grow: 1;
+            text-align: left;
+        }
+        .leaderboard-item .kills {
+            font-weight: 700;
+            color: #22c55e; /* Green for kills */
+            width: 50px; /* Adjusted width */
+            text-align: right;
+        }
+
+        /* Chart Container Styling - REMOVED */
+    </style>
+</head>
+<body>
+    <h1 class="text-4xl font-bold text-gray-800 mb-6">Army Map Simulator</h1>
+
+    <div class="troop-counters">
+        <div class="troop-counter-item">Friendly Infantry: <span id="friendlyInfantryCount">0</span></div>
+        <div class="troop-counter-item">Friendly Tanks: <span id="friendlyTankCount">0</span></div>
+        <div class="troop-counter-item">Friendly Artillery: <span id="friendlyArtilleryCount">0</span></div>
+        <div class="troop-counter-item">Enemy Infantry: <span id="enemyInfantryCount">0</span></div>
+        <div class="troop-counter-item">Enemy Tanks: <span id="enemyTankCount">0</span></div>
+        <div class="troop-counter-item">Enemy Artillery: <span id="enemyArtilleryCount">0</span></div>
+    </div>
+
+    <canvas id="armyMapCanvas" width="800" height="600"></canvas>
+
+    <div class="control-panel">
+        <button id="addFriendlyInfantryBtn" class="control-button btn-friendly">Add Friendly Infantry</button>
+        <button id="addFriendlyTankBtn" class="control-button btn-friendly">Add Friendly Tank</button>
+        <button id="addFriendlyArtilleryBtn" class="control-button btn-artillery">Add Friendly Artillery</button>
+
+        <button id="addEnemyInfantryBtn" class="control-button btn-enemy">Add Enemy Infantry</button>
+        <button id="addEnemyTankBtn" class="control-button btn-enemy">Add Enemy Tank</button>
+        <button id="addEnemyArtilleryBtn" class="control-button btn-enemy">Add Enemy Artillery</button>
+
+        <button id="autoPlaceEnemyInfantryBtn" class="control-button btn-auto-place">Auto Place Enemy Infantry (x10)</button>
+        <button id="autoPlaceEnemyTankBtn" class="control-button btn-auto-place">Auto Place Enemy Tanks (x5)</button>
+        <button id="autoPlaceEnemyArtilleryBtn" class="control-button btn-auto-place">Auto Place Enemy Artillery (x3)</button>
+        <button id="placeEnemyArmyBtn" class="control-button btn-enemy">Place Enemy Army</button>
+
+        <div class="army-selector-container">
+            <label for="armySelector">Select Army:</label>
+            <select id="armySelector">
+                <option value="">-- No Army Selected --</option>
+            </select>
+        </div>
+        <button id="moveArmyBtn" class="control-button btn-army-control" disabled>Move Selected Army</button>
+
+        <button id="startSimulationBtn" class="control-button btn-success">Start Simulation</button>
+        <button id="stopSimulationBtn" class="control-button btn-secondary">Stop Simulation</button>
+        <button id="clearMapBtn" class="control-button btn-danger">Clear Map</button>
+    </div>
+
+    <!-- Leaderboard HTML -->
+    <div id="leaderboardContainer" class="leaderboard-container">
+        <h2>Top Veterans</h2>
+        <ul id="leaderboardList" class="leaderboard-list">
+            <!-- Leaderboard items will be inserted here by JavaScript -->
+            <li class="leaderboard-item">
+                <span class="rank">1.</span>
+                <span class="unit-info">No veterans yet!</span>
+                <span class="kills">0 Kills</span>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Army Charts Container - REMOVED -->
+    <!--
+    <div id="armyChartsContainer" class="army-charts-container">
+        <div class="chart-card">
+            <h2>Friendly Army Strengths</h2>
+            <canvas id="friendlyArmyChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <h2>Enemy Army Strengths</h2>
+            <canvas id="enemyArmyChart"></canvas>
+        </div>
+    </div>
+    -->
+
+    <!-- Message Box HTML -->
+    <div id="messageBox" class="message-box">
+        <p id="messageText"></p>
+        <button id="messageBoxOkBtn">OK</button>
+    </div>
+
+    <script>
+        // Get the canvas element and its 2D rendering context
+        const canvas = document.getElementById('armyMapCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Array to store all units on the map
+        let units = [];
+        // Flag to control simulation state
+        let simulationRunning = false;
+        // Currently selected unit type for placement
+        // Stores an object { type: 'infantry'|'tank'|'artillery', alliance: 'friendly'|'enemy' }
+        let selectedUnit = null;
+
+        // Counter for unique unit IDs
+        let nextUnitId = 0;
+
+        // New state variables for army control
+        let selectedArmy = { id: null, alliance: null }; // Stores the ID and alliance of the currently selected army
+        const MODES = {
+            NORMAL: 'normal',
+            PLACEMENT: 'placement',
+            DESTINATION_SELECTION: 'destinationSelection'
+        };
+        let currentMode = MODES.NORMAL; // Initial mode
+
+
+        // Control states for cells
+        const CONTROL_STATE = {
+            NEUTRAL: 0,
+            FRIENDLY: 1,
+            ENEMY: 2,
+            CONTESTED: 3 // For cells with both friendly and enemy units
+        };
+
+        // Constants for unit properties
+        const UNIT_SIZE = 25; // Increased size for better visibility
+        const BASE_UNIT_SPEED = 3; // Base speed before terrain modifiers
+        const VETERAN_STRENGTH_BONUS_PERCENT = 0.05; // 5% strength bonus per kill
+
+        // Colors for different unit types and alliances
+        const FRIENDLY_INFANTRY_COLOR = '#10b981'; // Emerald green
+        const FRIENDLY_TANK_COLOR = '#3b82f6';     // Blue
+        const FRIENDLY_ARTILLERY_COLOR = '#8b5cf6'; // Violet
+        const ENEMY_INFANTRY_COLOR = '#ef4444';    // Red
+        const ENEMY_TANK_COLOR = '#f97316';       // Orange
+        const ENEMY_ARTILLERY_COLOR = '#a855f7';  // Darker violet/purple
+
+        // Unit base stats
+        const INFANTRY_HEALTH = 100;
+        const INFANTRY_DAMAGE = 10;
+        const INFANTRY_RANGE = 30;
+
+        const TANK_HEALTH = 200;
+        const TANK_DAMAGE = 30;
+        const TANK_RANGE = 50;
+
+        const ARTILLERY_HEALTH = 70; // Low health
+        const ARTILLERY_DAMAGE = 25; // Good damage
+        const ARTILLERY_RANGE = 200; // Long range
+        const ARTILLERY_MOVEMENT_MODIFIER = 0.1; // Artillery moves at 10% of base speed
+        const ARTILLERY_FIRE_COOLDOWN = 2000; // 2 seconds cooldown for artillery fire
+
+        // Max limits for friendly troops (overall, not per army)
+        const MAX_FRIENDLY_INFANTRY = 100;
+        const MAX_FRIENDLY_TANKS = 50;
+        const MAX_FRIENDLY_ARTILLERY = 20; // Example limit for artillery
+
+        // Default quantities for automatic enemy placement
+        const AUTO_PLACE_ENEMY_INFANTRY_COUNT = 10;
+        const AUTO_PLACE_ENEMY_TANK_COUNT = 5;
+        const AUTO_PLACE_ENEMY_ARTILLERY_COUNT = 2; // Changed to 2 to match Army.MAX_ARTILLERY
+
+        // Terrain properties
+        const TERRAIN_CELL_SIZE = 50; // Size of each terrain square
+        let terrainMap = []; // 2D array to store terrain types
+
+        // Naming data for generated features
+        const MOUNTAIN_NAMES = ["Grimpeak Range", "Whisperwind Peaks", "Ironfang Mountains", "Cloudspire Divide", "Serpent's Spine", "Echoing Crags", "Shadowfang Spire"];
+        const RIVER_NAMES = ["Silverstream River", "Aetherflow", "Whispering Willows Creek", "Dragon's Breath Fork", "Azure Current", "Glimmerbrook", "Stoneflow River"];
+        const CITY_NAMES = ["Oakhaven", "Ironclad Citadel", "Sunstone City", "Silverwood", "Raven's Perch", "Brightwater", "Starfall Enclave", "Deepwater Port"];
+
+        let namedFeatures = []; // To store {name, type, x, y} for display
+
+        // Constants for unit placement
+        const UNIT_PLACEMENT_CLUSTER_RADIUS = 70; // Units will be placed within this radius of a strategic point
+        const MIN_DISTANCE_BETWEEN_STRATEGIC_POINTS = 150; // For strategic point generation
+
+
+        // Terrain types with their drawing functions and properties
+        const TERRAIN_TYPES = {
+            PLAINS: {
+                id: 'plains',
+                color: '#d4edc8', // Light green
+                movementModifier: 1.0,
+                defenseBonus: 0.0,
+                draw: function(ctx, x, y, size) {
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(x, y, size, size);
+                    // Optional: add subtle texture
+                    ctx.fillStyle = 'rgba(0,0,0,0.05)';
+                    ctx.fillRect(x + Math.random() * size / 2, y + Math.random() * size / 2, 2, 2);
+                }
+            },
+            FOREST: {
+                id: 'forest',
+                color: '#4CAF50', // Medium green
+                movementModifier: 0.6, // Slower
+                defenseBonus: 0.15, // Good defense
+                draw: function(ctx, x, y, size) {
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(x, y, size, size);
+                    // Draw stylized trees
+                    ctx.fillStyle = '#2E8B57'; // Darker green for trees
+                    const treeSize = size / 3;
+                    ctx.beginPath();
+                    ctx.moveTo(x + size / 2, y + treeSize / 2);
+                    ctx.lineTo(x + size / 2 - treeSize, y + size - treeSize / 2);
+                    ctx.lineTo(x + size / 2 + treeSize, y + size - treeSize / 2);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.moveTo(x + size / 2, y + size / 2 + treeSize / 4);
+                    ctx.lineTo(x + size / 2 - treeSize * 0.7, y + size - treeSize / 4);
+                    ctx.lineTo(x + size / 2 + treeSize * 0.7, y + size - treeSize / 4);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            },
+            MOUNTAIN: {
+                id: 'mountain',
+                color: '#8B4513', // SaddleBrown
+                movementModifier: 0.3, // Very slow
+                defenseBonus: 0.30, // High defense
+                draw: function(ctx, x, y, size) {
+                    ctx.fillStyle = '#A9A9A9'; // DarkGray for peaks
+                    ctx.fillRect(x, y, size, size); // Base color
+                    ctx.beginPath();
+                    ctx.moveTo(x, y + size);
+                    ctx.lineTo(x + size / 2, y);
+                    ctx.lineTo(x + size, y + size);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.fillStyle = '#696969'; // DimGray for shadows
+                    ctx.beginPath();
+                    ctx.moveTo(x + size / 2, y);
+                    ctx.lineTo(x + size, y + size);
+                    ctx.lineTo(x + size * 0.75, y + size);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            },
+            SWAMP: {
+                id: 'swamp',
+                color: '#556B2F', // DarkOliveGreen
+                movementModifier: 0.4, // Slow
+                defenseBonus: 0.05, // Minor defense
+                draw: function(ctx, x, y, size) {
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(x, y, size, size);
+                    // Draw murky water ripples
+                    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(x + size * 0.3, y + size * 0.4, size * 0.1, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(x + size * 0.7, y + size * 0.6, size * 0.15, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            },
+            RIVER: {
+                id: 'river',
+                color: '#6495ED', // CornflowerBlue
+                movementModifier: 0.07, // 7% speed
+                defenseBonus: -0.20, // -20% defense
+                draw: function(ctx, x, y, size) {
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(x, y, size, size);
+                    // Add subtle flow lines
+                    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y + size * 0.2);
+                    ctx.lineTo(x + size, y + size * 0.3);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(x, y + size * 0.7);
+                    ctx.lineTo(x + size, y + size * 0.8);
+                    ctx.stroke();
+                }
+            },
+            CITY: {
+                id: 'city',
+                color: '#B0C4DE', // LightSteelBlue
+                movementModifier: 0.9, // Slightly slower due to urban environment
+                defenseBonus: 0.20, // Good defense
+                draw: function(ctx, x, y, size) {
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(x, y, size, size);
+                    // Draw simple buildings
+                    ctx.fillStyle = '#778899'; // LightSlateGray
+                    const buildingWidth = size / 4;
+                    const buildingHeight = size / 3;
+                    ctx.fillRect(x + size * 0.1, y + size - buildingHeight, buildingWidth, buildingHeight);
+                    ctx.fillRect(x + size * 0.5, y + size - buildingHeight * 1.5, buildingWidth, buildingHeight * 1.5);
+                    ctx.fillRect(x + size * 0.7, y + size - buildingHeight * 0.8, buildingWidth, buildingHeight * 0.8);
+                }
+            }
+        };
+
+        // Static border data used for initial placement restriction
+        const STATIC_BORDER = [
+            { x: 0, y: 300 },
+            { x: 200, y: 250 },
+            { x: 400, y: 350 },
+            { x: 600, y: 200 },
+            { x: 800, y: 250 }
+        ];
+
+        // Control map properties
+        const CONTROL_CELL_SIZE = 20; // Smaller cells for finer control
+        let controlMap = []; // 2D array to store control status of each cell
+        let dynamicBorders = []; // Array to store dynamically generated border line segments
+
+
+        // Colors for territory overlay - Increased opacity
+        const FRIENDLY_TERRITORY_COLOR = 'rgba(52, 211, 153, 0.5)'; // Light green with 50% opacity
+        const ENEMY_TERRITORY_COLOR = 'rgba(248, 113, 113, 0.5)';   // Light red with 50% opacity
+        const CONTESTED_TERRITORY_COLOR = 'rgba(255, 204, 0, 0.5)'; // Light yellow/orange with 50% opacity
+
+
+        // Message box elements
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
+        const messageBoxOkBtn = document.getElementById('messageBoxOkBtn');
+
+        // Troop Counter elements
+        const friendlyInfantryCountElem = document.getElementById('friendlyInfantryCount');
+        const friendlyTankCountElem = document.getElementById('friendlyTankCount');
+        const friendlyArtilleryCountElem = document.getElementById('friendlyArtilleryCount');
+        const enemyInfantryCountElem = document.getElementById('enemyInfantryCount');
+        const enemyTankCountElem = document.getElementById('enemyTankCount');
+        const enemyArtilleryCountElem = document.getElementById('enemyArtilleryCount');
+
+        // Leaderboard elements
+        const leaderboardList = document.getElementById('leaderboardList');
+        // Army Control Buttons
+        const armySelector = document.getElementById('armySelector');
+        const moveArmyBtn = document.getElementById('moveArmyBtn');
+
+        // Chart instances - REMOVED
+        // let friendlyArmyChartInstance = null;
+        // let enemyArmyChartInstance = null;
+
+
+        // Troop counters object (total counts across all armies)
+        let troopCounts = {
+            friendly: {
+                infantry: 0,
+                tank: 0,
+                artillery: 0
+            },
+            enemy: {
+                infantry: 0,
+                tank: 0,
+                artillery: 0
+            }
+        };
+
+        // Arrays to hold Army objects for each alliance
+        let friendlyArmies = [];
+        let enemyArmies = [];
+
+
+        /**
+         * Represents an Army, grouping units.
+         * Each army has a fixed capacity for each unit type.
+         */
+        class Army {
+            constructor(id, alliance) { // Add alliance parameter
+                this.id = id;
+                this.alliance = alliance; // Store alliance
+                this.units = []; // Array of Unit objects belonging to this army
+                this.infantry = 0;
+                this.tanks = 0;
+                this.artillery = 0;
+                this.MAX_INFANTRY = 10;
+                this.MAX_TANKS = 5;
+                this.MAX_ARTILLERY = 2;
+            }
+
+            /**
+             * Adds a unit to this army and updates its internal counts.
+             * Also assigns this army's ID to the unit.
+             * @param {Unit} unit - The unit to add.
+             */
+            addUnit(unit) {
+                this.units.push(unit);
+                unit.armyId = this.id; // Assign army ID to the unit
+                if (unit.type === 'infantry') this.infantry++;
+                else if (unit.type === 'tank') this.tanks++;
+                else if (unit.type === 'artillery') this.artillery++;
+            }
+
+            /**
+             * Checks if the army has space for a specific type of unit.
+             * @param {string} type - The type of unit ('infantry', 'tank', or 'artillery').
+             * @returns {boolean} True if there's space, false otherwise.
+             */
+            hasSpace(type) {
+                if (type === 'infantry') return this.infantry < this.MAX_INFANTRY;
+                if (type === 'tank') return this.tanks < this.MAX_TANKS;
+                if (type === 'artillery') return this.artillery < this.MAX_ARTILLERY;
+                return false;
+            }
+
+            /**
+             * Calculates the bounding box of the army.
+             * @returns {{minX: number, minY: number, maxX: number, maxY: number}} The bounding box.
+             */
+            getBoundingBox() {
+                const aliveUnitsInArmy = units.filter(unit => unit.isAlive && unit.armyId === this.id);
+                if (aliveUnitsInArmy.length === 0) {
+                    return null; // No alive units in this army
+                }
+
+                let minX = Infinity;
+                let minY = Infinity;
+                let maxX = -Infinity;
+                let maxY = -Infinity;
+
+                aliveUnitsInArmy.forEach(unit => {
+                    minX = Math.min(minX, unit.x - unit.size / 2);
+                    minY = Math.min(minY, unit.y - unit.size / 2);
+                    maxX = Math.max(maxX, unit.x + unit.size / 2);
+                    maxY = Math.max(maxY, unit.y + unit.size / 2);
+                });
+                return { minX, minY, maxX, maxY };
+            }
+        }
+
+        /**
+         * Displays a custom message box.
+         * @param {string} message - The message to display.
+         */
+        function showMessageBox(message) {
+            messageText.textContent = message;
+            messageBox.style.display = 'flex';
+        }
+
+        /**
+         * Hides the custom message box.
+         */
+        function hideMessageBox() {
+            messageBox.style.display = 'none';
+        }
+
+        // Event listener for the message box OK button
+        messageBoxOkBtn.addEventListener('click', hideMessageBox);
+
+        /**
+         * Updates the displayed troop counts on the UI.
+         */
+        function updateTroopCounters() {
+            friendlyInfantryCountElem.textContent = troopCounts.friendly.infantry;
+            friendlyTankCountElem.textContent = troopCounts.friendly.tank;
+            friendlyArtilleryCountElem.textContent = troopCounts.friendly.artillery;
+            enemyInfantryCountElem.textContent = troopCounts.enemy.infantry;
+            enemyTankCountElem.textContent = troopCounts.enemy.tank;
+            enemyArtilleryCountElem.textContent = troopCounts.enemy.artillery;
+        }
+
+        /**
+         * Updates the leaderboard display.
+         */
+        function updateLeaderboard() {
+            // Filter for alive units and sort by kills in descending order
+            const topUnits = units
+                .filter(unit => unit.isAlive)
+                .sort((a, b) => b.kills - a.kills)
+                .slice(0, 10); // Get top 10 units
+
+            leaderboardList.innerHTML = ''; // Clear current list
+
+            if (topUnits.length === 0) {
+                const li = document.createElement('li');
+                li.className = 'leaderboard-item';
+                li.innerHTML = `<span class="rank"></span><span class="unit-info">No veterans yet!</span><span class="kills">0 Kills</span>`;
+                leaderboardList.appendChild(li);
+            } else {
+                topUnits.forEach((unit, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'leaderboard-item';
+                    // Add data attribute for unit ID
+                    li.setAttribute('data-unit-id', unit.id);
+
+                    // Display army ID if available
+                    const armyInfo = unit.armyId ? ` (Army ${unit.armyId})` : '';
+                    li.innerHTML = `
+                        <span class="rank">${index + 1}.</span>
+                        <span class="unit-info">${unit.alliance === 'friendly' ? 'Friendly' : 'Enemy'} ${unit.type}${armyInfo}</span>
+                        <span class="kills">${unit.kills} Kills</span>
+                    `;
+                    leaderboardList.appendChild(li);
+                });
+            }
+        }
+
+
+        /**
+         * Helper to get a random point within bounds
+         */
+        function getRandomPoint(minX, maxX, minY, maxY) {
+            return {
+                x: Math.random() * (maxX - minX) + minX,
+                y: Math.random() * (maxY - minY) + minY
+            };
+        }
+
+        /**
+         * Finds strategic placement points within a given alliance's territory.
+         * Prioritizes defensive terrain.
+         * @param {string} alliance - 'friendly' or 'enemy'
+         * @param {number} numPoints - The desired number of strategic points.
+         * @returns {Array<{x: number, y: number}>} An array of strategic coordinates.
+         */
+        function findStrategicPlacementPoints(alliance, numPoints) {
+            const strategicPoints = [];
+            const numCols = canvas.width / TERRAIN_CELL_SIZE;
+            const numRows = canvas.height / TERRAIN_CELL_SIZE;
+
+            const potentialCells = [];
+            for (let r = 0; r < numRows; r++) {
+                for (let c = 0; c < numCols; c++) {
+                    const cellCenterX = c * TERRAIN_CELL_SIZE + TERRAIN_CELL_SIZE / 2;
+                    const cellCenterY = r * TERRAIN_CELL_SIZE + TERRAIN_CELL_SIZE / 2;
+                    const borderY = getBorderYAtX(cellCenterX);
+
+                    // Check if the cell is in the correct territory based on the initial border
+                    let isInCorrectTerritory = false;
+                    if (alliance === 'friendly' && cellCenterY < borderY) {
+                        isInCorrectTerritory = true;
+                    } else if (alliance === 'enemy' && cellCenterY >= borderY) {
+                        isInCorrectTerritory = true;
+                    }
+
+                    if (isInCorrectTerritory) {
+                        const terrain = terrainMap[r][c];
+                        // Assign a score to cells based on defensive value and location
+                        let score = 0;
+                        if (terrain.id === TERRAIN_TYPES.MOUNTAIN.id) score = 3;
+                        else if (terrain.id === TERRAIN_TYPES.CITY.id) score = 2;
+                        else if (terrain.id === TERRAIN_TYPES.FOREST.id) score = 1;
+                        else if (terrain.id === TERRAIN_TYPES.RIVER.id) score = -1; // Avoid rivers
+
+                        if (score > 0) {
+                            potentialCells.push({ x: cellCenterX, y: cellCenterY, score: score });
+                        }
+                    }
+                }
+            }
+
+            // Sort cells by score (highest first) and pick the top ones, ensuring some spread
+            potentialCells.sort((a, b) => b.score - a.score);
+
+            const minDistanceBetweenPoints = MIN_DISTANCE_BETWEEN_STRATEGIC_POINTS; // Ensure strategic points are not too close
+
+            for (const cell of potentialCells) {
+                let tooClose = false;
+                for (const existingPoint of strategicPoints) {
+                    const dist = Math.sqrt(Math.pow(cell.x - existingPoint.x, 2) + Math.pow(cell.y - existingPoint.y, 2));
+                    if (dist < minDistanceBetweenPoints) {
+                        tooClose = true;
+                        break;
+                    }
+                }
+                if (!tooClose) {
+                    strategicPoints.push(cell);
+                    if (strategicPoints.length >= numPoints) {
+                        break;
+                    }
+                }
+            }
+
+            // If not enough strategic points found (e.g., map is mostly plains or small), add random clustered points in the correct territory
+            while (strategicPoints.length < numPoints) {
+                let randomX, randomY;
+                let attempts = 0;
+                const maxAttempts = 100;
+                let placed = false;
+
+                while (!placed && attempts < maxAttempts) {
+                    randomX = Math.random() * canvas.width;
+                    const borderY = getBorderYAtX(randomX);
+
+                    if (alliance === 'friendly') {
+                        randomY = Math.random() * borderY;
+                    } else { // alliance === 'enemy'
+                        randomY = borderY + Math.random() * (canvas.height - borderY);
+                    }
+
+                    // Ensure it's not too close to existing strategic points
+                    let tooClose = false;
+                    for (const point of strategicPoints) {
+                        const dist = Math.sqrt(Math.pow(randomX - point.x, 2) + Math.pow(randomY - point.y, 2));
+                        if (dist < minDistanceBetweenPoints) {
+                            tooClose = true;
+                            break;
+                        }
+                    }
+                    if (!tooClose) {
+                        strategicPoints.push({ x: randomX, y: randomY, score: 0 }); // Score 0 for randomly generated points
+                        placed = true;
+                    }
+                    attempts++;
+                }
+                if (!placed) { // Fallback if unable to find a good random spot after many attempts
+                    // As a last resort, just add a random point without distance check
+                    randomX = Math.random() * canvas.width;
+                    const borderY = getBorderYAtX(randomX);
+                    randomY = (alliance === 'friendly') ? Math.random() * borderY : borderY + Math.random() * (canvas.height - borderY);
+                    strategicPoints.push({ x: randomX, y: randomY, score: 0 });
+                }
+            }
+            return strategicPoints.map(p => ({ x: p.x, y: p.y })); // Return just x, y
+        }
+
+
+        /**
+         * Generates terrain with clustering and names features.
+         */
+        function generateTerrain() {
+            console.log("Generating terrain...");
+            const numCols = canvas.width / TERRAIN_CELL_SIZE;
+            const numRows = canvas.height / TERRAIN_CELL_SIZE;
+            terrainMap = Array(numRows).fill(0).map(() => Array(numCols).fill(TERRAIN_TYPES.PLAINS)); // Start with all plains
+            namedFeatures = []; // Clear previous named features
+
+            // Helper for cellular automata-like growth
+            function growCluster(type, numSeeds, maxIterations, growthChance) {
+                let seeds = [];
+                for (let i = 0; i < numSeeds; i++) {
+                    const r = Math.floor(Math.random() * numRows);
+                    const c = Math.floor(Math.random() * numCols);
+                    terrainMap[r][c] = type;
+                    seeds.push({ r, c });
+                }
+
+                for (let iter = 0; iter < maxIterations; iter++) {
+                    let newSeeds = [];
+                    seeds.forEach(seed => {
+                        const neighbors = [
+                            { r: seed.r - 1, c: seed.c }, // Top
+                            { r: seed.r + 1, c: seed.c }, // Bottom
+                            { r: seed.r, c: seed.c - 1 }, // Left
+                            { r: seed.r, c: seed.c + 1 }  // Right
+                        ];
+                        neighbors.forEach(neighbor => {
+                            if (neighbor.r >= 0 && neighbor.r < numRows &&
+                                neighbor.c >= 0 && neighbor.c < numCols &&
+                                terrainMap[neighbor.r][neighbor.c].id === TERRAIN_TYPES.PLAINS.id && // Only grow into plains
+                                Math.random() < growthChance) {
+                                terrainMap[neighbor.r][neighbor.c] = type;
+                                newSeeds.push(neighbor);
+                            }
+                        });
+                    });
+                    seeds = newSeeds;
+                    if (seeds.length === 0) break; // Stop if no new growth
+                }
+            }
+
+            // Generate Mountains
+            growCluster(TERRAIN_TYPES.MOUNTAIN, 2, 10, 0.6); // 2 mountain ranges, 10 iterations, 60% growth chance
+
+            // Generate Forests
+            growCluster(TERRAIN_TYPES.FOREST, 5, 15, 0.7); // 5 forest patches, 15 iterations, 70% growth chance
+
+            // Generate Swamps
+            growCluster(TERRAIN_TYPES.SWAMP, 3, 8, 0.5); // 3 swamp areas, 8 iterations, 50% growth chance
+
+            // Generate Cities (place on plains, avoid mountains/swamps)
+            const cityCount = 3;
+            let placedCities = 0;
+            let attempts = 0;
+            while (placedCities < cityCount && attempts < 1000) {
+                const r = Math.floor(Math.random() * numRows);
+                const c = Math.floor(Math.random() * numCols);
+                if (terrainMap[r][c].id === TERRAIN_TYPES.PLAINS.id) {
+                    terrainMap[r][c] = TERRAIN_TYPES.CITY;
+                    namedFeatures.push({
+                        name: CITY_NAMES[placedCities % CITY_NAMES.length],
+                        type: 'city',
+                        x: c * TERRAIN_CELL_SIZE + TERRAIN_CELL_SIZE / 2,
+                        y: r * TERRAIN_CELL_SIZE + TERRAIN_CELL_SIZE / 2
+                    });
+                    placedCities++;
+                }
+                attempts++;
+            }
+
+            // Generate Rivers (simplified: just a few paths)
+            const riverCount = 2;
+            for (let i = 0; i < riverCount; i++) {
+                let startX = Math.random() * canvas.width;
+                let startY = Math.random() * canvas.height;
+                let endX = Math.random() * canvas.width;
+                let endY = Math.random() * canvas.height;
+
+                // Ensure rivers flow generally across the map
+                if (Math.random() < 0.5) { // Mostly horizontal flow
+                    startY = 0;
+                    endY = canvas.height;
+                } else { // Mostly vertical flow
+                    startX = 0;
+                    endX = canvas.width;
+                }
+
+                let currentX = startX;
+                let currentY = startY;
+
+                const steps = 50; // Number of steps to draw the river
+                for (let s = 0; s < steps; s++) {
+                    const progress = s / steps;
+                    currentX = startX + (endX - startX) * progress + (Math.random() - 0.5) * 50; // Add some wobble
+                    currentY = startY + (endY - startY) * progress + (Math.random() - 0.5) * 50;
+
+                    const col = Math.floor(currentX / TERRAIN_CELL_SIZE);
+                    const row = Math.floor(currentY / TERRAIN_CELL_SIZE);
+
+                    // Make sure the river cell is within bounds
+                    if (row >= 0 && row < numRows && col >= 0 && col < numCols) {
+                        // Make the river a few cells wide
+                        for (let rOffset = -1; rOffset <= 1; rOffset++) {
+                            for (let cOffset = -1; cOffset <= 1; cOffset++) {
+                                const riverR = row + rOffset;
+                                const riverC = col + cOffset;
+                                if (riverR >= 0 && riverR < numRows && riverC >= 0 && riverC < numCols) {
+                                    // Only overwrite plains, forests, swamps, not mountains or cities
+                                    if (terrainMap[riverR][riverC].id !== TERRAIN_TYPES.MOUNTAIN.id &&
+                                        terrainMap[riverR][riverC].id !== TERRAIN_TYPES.CITY.id) {
+                                        terrainMap[riverR][riverC] = TERRAIN_TYPES.RIVER;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                namedFeatures.push({
+                    name: RIVER_NAMES[i % RIVER_NAMES.length],
+                    type: 'river',
+                    x: (startX + endX) / 2, // Approximate center for naming
+                    y: (startY + endY) / 2
+                });
+            }
+
+            // Identify and name mountain ranges (simplified: just take the first few large mountain clusters)
+            let mountainClustersFound = 0;
+            const visitedCells = Array(numRows).fill(0).map(() => Array(numCols).fill(false));
+
+            function floodFillMountain(r, c, clusterCells) {
+                if (r < 0 || r >= numRows || c < 0 || c >= numCols || visitedCells[r][c] || terrainMap[r][c].id !== TERRAIN_TYPES.MOUNTAIN.id) {
+                    return;
+                }
+                visitedCells[r][c] = true;
+                clusterCells.push({ r, c });
+                floodFillMountain(r + 1, c, clusterCells);
+                floodFillMountain(r - 1, c, clusterCells);
+                floodFillMountain(r, c + 1, clusterCells);
+                floodFillMountain(r, c - 1, clusterCells);
+            }
+
+            for (let r = 0; r < numRows; r++) {
+                for (let c = 0; c < numCols; c++) {
+                    if (terrainMap[r][c].id === TERRAIN_TYPES.MOUNTAIN.id && !visitedCells[r][c] && mountainClustersFound < MOUNTAIN_NAMES.length) {
+                        const clusterCells = [];
+                        floodFillMountain(r, c, clusterCells);
+                        if (clusterCells.length > 20) { // Only name larger clusters
+                            let avgX = 0, avgY = 0;
+                            clusterCells.forEach(cell => {
+                                avgX += cell.c * TERRAIN_CELL_SIZE + TERRAIN_CELL_SIZE / 2;
+                                avgY += cell.r * TERRAIN_CELL_SIZE + TERRAIN_CELL_SIZE / 2;
+                            });
+                            avgX /= clusterCells.length;
+                            avgY /= clusterCells.length;
+
+                            namedFeatures.push({
+                                name: MOUNTAIN_NAMES[mountainClustersFound],
+                                type: 'mountain',
+                                x: avgX,
+                                y: avgY
+                            });
+                            mountainClustersFound++;
+                        }
+                    }
+                }
+            }
+            console.log("Terrain generation complete. terrainMap dimensions:", terrainMap.length, terrainMap[0].length);
+        }
+
+        /**
+         * Gets the terrain properties at a given canvas coordinate.
+         * @param {number} x - The x-coordinate on the canvas.
+         * @param {number} y - The y-coordinate on the canvas.
+         * @returns {object} The terrain object (e.g., TERRAIN_TYPES.PLAINS).
+         */
+        function getTerrainAt(x, y) {
+            const col = Math.floor(x / TERRAIN_CELL_SIZE);
+            const row = Math.floor(y / TERRAIN_CELL_SIZE);
+
+            // Ensure coordinates are within bounds
+            if (row >= 0 && row < terrainMap.length && col >= 0 && col < terrainMap[0].length) {
+                return terrainMap[row][col];
+            }
+            return TERRAIN_TYPES.PLAINS; // Default to plains if out of bounds (shouldn't happen with proper bounds checking)
+        }
+
+        /**
+         * Gets the control state of a cell at a given canvas coordinate.
+         * @param {number} x - The x-coordinate on the canvas.
+         * @param {number} y - The y-coordinate on the canvas.
+         * @returns {number} The control state (e.g., CONTROL_STATE.FRIENDLY).
+         */
+        function getControlStateAt(x, y) {
+            const col = Math.floor(x / CONTROL_CELL_SIZE);
+            const row = Math.floor(y / CONTROL_CELL_SIZE);
+
+            const numCols = canvas.width / CONTROL_CELL_SIZE;
+            const numRows = canvas.height / CONTROL_CELL_SIZE;
+
+            if (row >= 0 && row < numRows && col >= 0 && col < numCols) {
+                return controlMap[row][col];
+            }
+            return CONTROL_STATE.NEUTRAL; // Default to neutral if out of bounds
+        }
+
+        /**
+         * Determines the Y-coordinate of the STATIC_BORDER at a given X-coordinate using linear interpolation.
+         * Assumes STATIC_BORDER is a single polyline that spans the canvas width.
+         * @param {number} x - The x-coordinate.
+         * @returns {number} The y-coordinate of the border at that x.
+         */
+        function getBorderYAtX(x) {
+            const borderPoints = STATIC_BORDER; // Use STATIC_BORDER for initial placement
+
+            // Handle x-coordinates outside the defined border points range
+            if (x <= borderPoints[0].x) return borderPoints[0].y;
+            if (x >= borderPoints[borderPoints.length - 1].x) return borderPoints[borderPoints.length - 1].y;
+
+            // Find the segment that contains x
+            for (let i = 0; i < borderPoints.length - 1; i++) {
+                const p1 = borderPoints[i];
+                const p2 = borderPoints[i + 1];
+
+                if (x >= p1.x && x <= p2.x) {
+                    // Linear interpolation
+                    const slope = (p2.y - p1.y) / (p2.x - p1.x);
+                    return p1.y + slope * (x - p1.x);
+                }
+            }
+            return borderPoints[0].y; // Fallback, should ideally not be reached
+        }
+
+        /**
+         * Updates the control map based on current unit positions, with persistence.
+         * Each cell is marked as friendly, enemy, contested, or neutral.
+         */
+        function updateControlMap() {
+            const numCols = canvas.width / CONTROL_CELL_SIZE;
+            const numRows = canvas.height / CONTROL_CELL_SIZE;
+
+            // Create a temporary map to count unit presence in each cell for this frame
+            const unitPresenceMap = Array(numRows).fill(0).map(() => Array(numCols).fill(null).map(() => ({ friendly: 0, enemy: 0 })));
+
+            // Populate unitPresenceMap based on current alive units
+            units.forEach(unit => {
+                if (!unit.isAlive) return;
+
+                const col = Math.floor(unit.x / CONTROL_CELL_SIZE);
+                const row = Math.floor(unit.y / CONTROL_CELL_SIZE);
+
+                if (row >= 0 && row < numRows && col >= 0 && col < numCols) {
+                    if (unit.alliance === 'friendly') {
+                        unitPresenceMap[row][col].friendly++;
+                    } else {
+                        unitPresenceMap[row][col].enemy++;
+                    }
+                }
+            });
+
+            // Update the main controlMap based on unit presence and persistence
+            for (let r = 0; r < numRows; r++) {
+                for (let c = 0; c < numCols; c++) {
+                    const { friendly: friendlyCount, enemy: enemyCount } = unitPresenceMap[r][c];
+                    // let currentControlState = controlMap[r][c]; // This line is no longer needed here
+
+                    if (friendlyCount > 0 && enemyCount > 0) {
+                        controlMap[r][c] = CONTROL_STATE.CONTESTED;
+                    } else if (friendlyCount > 0 && enemyCount === 0) {
+                        controlMap[r][c] = CONTROL_STATE.FRIENDLY;
+                    } else if (enemyCount > 0 && friendlyCount === 0) {
+                        controlMap[r][c] = CONTROL_STATE.ENEMY;
+                    } else {
+                        // No units in this cell currently. Maintain previous control if it was controlled.
+                        // If it was neutral, it remains neutral.
+                        // If it was friendly, enemy, or contested, it remains that way.
+                        // No explicit change needed here for persistence, as controlMap[r][c] already holds it.
+                    }
+                }
+            }
+        }
+
+        /**
+         * Generates dynamic border line segments based on the control map.
+         * Borders are drawn where friendly/enemy/contested cells meet.
+         */
+        function generateDynamicBorders() {
+            dynamicBorders = []; // Clear dynamic borders at the start of each redraw
+            const numCols = canvas.width / CONTROL_CELL_SIZE;
+            const numRows = canvas.height / CONTROL_CELL_SIZE;
+
+            for (let r = 0; r < numRows; r++) {
+                for (let c = 0; c < numCols; c++) {
+                    const currentCellState = controlMap[r][c];
+
+                    // Only draw borders around cells that are not neutral
+                    if (currentCellState !== CONTROL_STATE.NEUTRAL) {
+                        // Check right neighbor
+                        if (c + 1 < numCols) {
+                            const rightNeighborState = controlMap[r][c + 1];
+                            if (rightNeighborState !== currentCellState) {
+                                // Draw vertical segment
+                                dynamicBorders.push({
+                                    x1: (c + 1) * CONTROL_CELL_SIZE,
+                                    y1: r * CONTROL_CELL_SIZE,
+                                    x2: (c + 1) * CONTROL_CELL_SIZE,
+                                    y2: (r + 1) * CONTROL_CELL_SIZE
+                                });
+                            }
+                        }
+                        // Check bottom neighbor
+                        if (r + 1 < numRows) {
+                            const bottomNeighborState = controlMap[r + 1][c];
+                            if (bottomNeighborState !== currentCellState) {
+                                // Draw horizontal segment
+                                dynamicBorders.push({
+                                    x1: c * CONTROL_CELL_SIZE,
+                                    y1: (r + 1) * CONTROL_CELL_SIZE,
+                                    x2: (c + 1) * CONTROL_CELL_SIZE,
+                                    y2: (r + 1) * CONTROL_CELL_SIZE
+                                });
+                            }
+                        }
+                        // Also draw borders along the canvas edges if the cell is controlled
+                        if (c === 0) { // Left edge
+                             dynamicBorders.push({
+                                x1: 0,
+                                y1: r * CONTROL_CELL_SIZE,
+                                x2: 0,
+                                y2: (r + 1) * CONTROL_CELL_SIZE
+                            });
+                        }
+                        if (r === 0) { // Top edge
+                            dynamicBorders.push({
+                                x1: c * CONTROL_CELL_SIZE,
+                                y1: 0,
+                                x2: (c + 1) * CONTROL_CELL_SIZE,
+                                y2: 0
+                            });
+                        }
+                    }
+                }
+            }
+
+            ctx.strokeStyle = '#444444'; // Softer dark gray color for borders
+            ctx.lineWidth = 4; // Slightly thicker lines for borders
+            ctx.setLineDash([10, 5]); // Dashed line: 10px dash, 5px gap
+
+            dynamicBorders.forEach(segment => {
+                ctx.beginPath();
+                ctx.moveTo(segment.x1, segment.y1);
+                ctx.lineTo(segment.x2, segment.y2);
+                ctx.stroke();
+            });
+
+            ctx.setLineDash([]); // Reset line dash to solid for other drawing operations
+        }
+
+        /**
+         * Draws the territorial control overlay on the canvas.
+         */
+        function drawTerritoryOverlay() {
+            const numCols = canvas.width / CONTROL_CELL_SIZE;
+            const numRows = canvas.height / CONTROL_CELL_SIZE;
+
+            for (let r = 0; r < numRows; r++) {
+                for (let c = 0; c < numCols; c++) {
+                    const cellState = controlMap[r][c];
+                    let fillColor = null;
+
+                    if (cellState === CONTROL_STATE.FRIENDLY) {
+                        fillColor = FRIENDLY_TERRITORY_COLOR;
+                    } else if (cellState === CONTROL_STATE.ENEMY) {
+                        fillColor = ENEMY_TERRITORY_COLOR;
+                    } else if (cellState === CONTROL_STATE.CONTESTED) {
+                        fillColor = CONTESTED_TERRITORY_COLOR;
+                    }
+
+                    if (fillColor) {
+                        ctx.fillStyle = fillColor;
+                        ctx.fillRect(c * CONTROL_CELL_SIZE, r * CONTROL_CELL_SIZE, CONTROL_CELL_SIZE, CONTROL_CELL_SIZE);
+                    }
+                }
+            }
+        }
+
+        /**
+         * Draws a box around the selected army.
+         */
+        function drawArmyBoxes() {
+            // console.log("drawArmyBoxes called. Current selectedArmy:", selectedArmy); // Debugging log
+            const armiesToDraw = [...friendlyArmies, ...enemyArmies];
+            const padding = 10; // Padding around the units within the box
+
+            armiesToDraw.forEach(army => {
+                // Only draw the box for the currently selected army
+                if (army.id === selectedArmy.id && army.alliance === selectedArmy.alliance) {
+                    // console.log("Attempting to draw SELECTED army box for:", army.alliance, army.id); // Debugging log
+                    // Now, army.alliance will exist on the army object
+                    const aliveUnitsInArmy = units.filter(unit => unit.isAlive && unit.armyId === army.id && unit.alliance === army.alliance);
+
+                    if (aliveUnitsInArmy.length > 0) {
+                        // console.log("Selected army has alive units. Drawing box."); // Debugging log
+                        let minX = Infinity;
+                        let minY = Infinity;
+                        let maxX = -Infinity;
+                        let maxY = -Infinity;
+
+                        aliveUnitsInArmy.forEach(unit => {
+                            minX = Math.min(minX, unit.x - unit.size / 2);
+                            minY = Math.min(minY, unit.y - unit.size / 2);
+                            maxX = Math.max(maxX, unit.x + unit.size / 2);
+                            maxY = Math.max(maxY, unit.y + unit.size / 2);
+                        });
+
+                        // Apply padding
+                        minX -= padding;
+                        minY -= padding;
+                        maxX += padding;
+                        maxY += padding;
+
+                        const width = maxX - minX;
+                        const height = maxY - minY;
+
+                        ctx.save(); // Save current canvas state
+
+                        // Highlight selected army with a unique color and solid line
+                        ctx.lineWidth = 6; // Thicker line for selected army
+                        ctx.setLineDash([0]); // Solid line for selected army
+                        ctx.strokeStyle = '#FFD700'; // Gold color for selection
+
+                        ctx.strokeRect(minX, minY, width, height);
+
+                        // Add army ID text
+                        ctx.fillStyle = ctx.strokeStyle; // Use box color for text
+                        ctx.font = 'bold 16px Inter';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'bottom';
+                        ctx.fillText(`${army.alliance === 'friendly' ? 'Friendly' : 'Enemy'} Army ${army.id}`, minX + width / 2, minY - 5); // Position above the box
+
+                        ctx.restore(); // Restore canvas state
+                    } else {
+                        // console.log("Selected army has NO alive units. Not drawing box."); // Debugging log
+                    }
+                } else {
+                    // console.log("Skipping drawing box for non-selected army:", army.alliance, army.id); // Debugging log
+                }
+            });
+        }
+
+        /**
+         * Clears the canvas and redraws all alive units.
+         */
+        function drawMap() {
+            console.log("drawMap called.");
+            // Draw terrain first
+            const numCols = canvas.width / TERRAIN_CELL_SIZE;
+            const numRows = canvas.height / TERRAIN_CELL_SIZE;
+
+            for (let r = 0; r < numRows; r++) {
+                for (let c = 0; c < numCols; c++) {
+                    const terrain = terrainMap[r][c];
+                    // Call the draw method defined in each terrain type object
+                    try {
+                        terrain.draw(ctx, c * TERRAIN_CELL_SIZE, r * TERRAIN_CELL_SIZE, TERRAIN_CELL_SIZE);
+                    } catch (error) {
+                        console.error(`Error drawing terrain at [${r}, ${c}] (type: ${terrain.id}):`, error);
+                        // Fallback: draw a default plain color to indicate an issue
+                        ctx.fillStyle = 'red';
+                        ctx.fillRect(c * TERRAIN_CELL_SIZE, r * TERRAIN_CELL_SIZE, TERRAIN_CELL_SIZE, TERRAIN_CELL_SIZE);
+                    }
+                }
+            }
+
+            // Draw territory overlay AFTER terrain but BEFORE borders and units
+            drawTerritoryOverlay();
+
+            // Draw dynamic borders on top of terrain and territory overlay
+            generateDynamicBorders(); // Call the function to generate and draw borders
+
+            // Then redraw only alive units on top of everything
+            units.forEach(unit => unit.draw(ctx));
+
+            // Draw army boxes after units so they are on top
+            drawArmyBoxes();
+
+            // Draw named features
+            namedFeatures.forEach(feature => {
+                ctx.fillStyle = '#333333'; // Dark gray for text
+                ctx.font = 'bold 14px Inter';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(feature.name, feature.x, feature.y);
+            });
+            console.log("drawMap finished.");
+        }
+
+        /**
+         * Represents a single unit on the map.
+         * @param {string} type - The type of unit ('infantry', 'tank', or 'artillery').
+         * @param {string} alliance - The alliance of the unit ('friendly' or 'enemy').
+         * @param {number} x - The x-coordinate of the unit.
+         * @param {number} y - The y-coordinate of the unit.
+         * @param {number} [armyId=null] - The ID of the army this unit belongs to.
+         */
+        class Unit {
+            constructor(type, alliance, x, y, armyId = null) {
+                this.id = nextUnitId++; // Assign a unique ID to each unit
+                this.type = type;
+                this.alliance = alliance;
+                this.x = x;
+                this.y = y;
+                this.size = UNIT_SIZE;
+                this.color = this.getColor(); // Determine color based on type and alliance
+                this.isAlive = true; // New property to track if the unit is alive
+                this.kills = 0; // New property to track kills
+                this.strengthBonus = 0; // New property for strength bonus (percentage)
+                this.armyId = armyId; // Army ID for this unit
+                this.lastAttackTime = 0; // New: To track last attack time for cooldowns
+
+                // Assign base stats based on unit type and alliance
+                if (this.type === 'infantry') {
+                    this.baseHealth = this.alliance === 'friendly' ? INFANTRY_HEALTH : INFANTRY_HEALTH * 0.9;
+                    this.baseAttackDamage = this.alliance === 'friendly' ? INFANTRY_DAMAGE : INFANTRY_DAMAGE * 1.2;
+                    this.attackRange = INFANTRY_RANGE;
+                } else if (this.type === 'tank') {
+                    this.baseHealth = this.alliance === 'friendly' ? TANK_HEALTH : TANK_HEALTH * 0.9;
+                    this.baseAttackDamage = this.alliance === 'friendly' ? TANK_DAMAGE : TANK_DAMAGE * 1.2;
+                    this.attackRange = TANK_RANGE;
+                } else { // artillery
+                    this.baseHealth = this.alliance === 'friendly' ? ARTILLERY_HEALTH : ARTILLERY_HEALTH * 0.9;
+                    this.baseAttackDamage = this.alliance === 'friendly' ? ARTILLERY_DAMAGE : ARTILLERY_DAMAGE * 1.2;
+                    this.attackRange = ARTILLERY_RANGE;
+                }
+                this.health = this.baseHealth; // Current health starts at base health
+                this.initialHealth = this.baseHealth; // Store initial health for health bar calculation
+                this.attackDamage = this.baseAttackDamage; // Current attack damage
+
+                // Random target for initial movement (if no enemy is found)
+                this.targetX = null; // New: Specific target for army movement
+                this.targetY = null; // New: Specific target for army movement
+                this.randomTargetX = Math.random() * canvas.width; // Existing random target
+                this.randomTargetY = Math.random() * canvas.height; // Existing random target
+            }
+
+            /**
+             * Determines the unit's color based on its type and alliance.
+             * @returns {string} The hex color code.
+             */
+            getColor() {
+                if (this.alliance === 'friendly') {
+                    if (this.type === 'infantry') return FRIENDLY_INFANTRY_COLOR;
+                    if (this.type === 'tank') return FRIENDLY_TANK_COLOR;
+                    if (this.type === 'artillery') return FRIENDLY_ARTILLERY_COLOR;
+                } else { // alliance === 'enemy'
+                    if (this.type === 'infantry') return ENEMY_INFANTRY_COLOR;
+                    if (this.type === 'tank') return ENEMY_TANK_COLOR;
+                    if (this.type === 'artillery') return ENEMY_ARTILLERY_COLOR;
+                }
+                return '#000000'; // Default black if something goes wrong
+            }
+
+            /**
+             * Reduces the unit's health by a given amount, factoring in terrain defense bonus.
+             * Sets isAlive to false if health drops to 0 or below.
+             * @param {number} amount - The amount of damage to take.
+             */
+            takeDamage(amount) {
+                const currentTerrain = getTerrainAt(this.x, this.y);
+                const effectiveDamage = amount * (1 - currentTerrain.defenseBonus); // Reduce damage by defense bonus
+                this.health -= effectiveDamage;
+
+                if (this.health <= 0) {
+                    this.health = 0;
+                    this.isAlive = false;
+                    // Decrement troop count when a unit dies
+                    troopCounts[this.alliance][this.type]--;
+                    updateTroopCounters();
+                    updateLeaderboard(); // Update leaderboard when a unit dies
+                    // updateArmyStrengthCharts(); // Removed call
+                }
+            }
+
+            /**
+             * Increases the unit's strength (attack damage) by a percentage.
+             */
+            gainStrength() {
+                this.strengthBonus += VETERAN_STRENGTH_BONUS_PERCENT;
+                // Recalculate attack damage with the new bonus
+                this.attackDamage = this.baseAttackDamage * (1 + this.strengthBonus);
+                // console.log(`${this.alliance} ${this.type} gained strength! New damage: ${this.attackDamage.toFixed(2)}`);
+            }
+
+            /**
+             * Draws the unit on the canvas, including its health bar and veteran status.
+             * @param {CanvasRenderingContext2D} ctx - The 2D rendering context.
+             */
+            draw(ctx) {
+                if (!this.isAlive) return; // Don't draw dead units
+
+                // Draw unit body based on type
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                if (this.type === 'infantry') {
+                    ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+                } else if (this.type === 'tank') {
+                    ctx.rect(this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
+                } else { // artillery
+                    const halfSize = this.size / 2;
+                    ctx.moveTo(this.x, this.y - halfSize); // Top point
+                    ctx.lineTo(this.x + halfSize, this.y + halfSize); // Bottom right
+                    ctx.lineTo(this.x - halfSize, this.y + halfSize); // Bottom left
+                    ctx.closePath();
+                }
+                ctx.fill();
+                ctx.strokeStyle = '#333'; // Darker border for units
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Add text label for unit type (I, T, or A)
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 12px Arial'; // Slightly larger font for text
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.type === 'infantry' ? 'I' : (this.type === 'tank' ? 'T' : 'A'), this.x, this.y);
+
+                // Draw health bar
+                const healthBarWidth = this.size * 1.2;
+                const healthBarHeight = 4;
+                // Adjust Y position based on whether "Veteran" text will be displayed
+                let healthBarY = this.y - this.size / 2 - healthBarHeight - 5;
+
+                // Draw "Veteran" text if applicable
+                if (this.strengthBonus > 0) {
+                    ctx.fillStyle = '#4CAF50'; // Green color for Veteran text
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom'; // Align text to the bottom of its bounding box
+                    ctx.fillText('Veteran', this.x, healthBarY - 2); // Position above health bar
+                    healthBarY -= 12; // Shift health bar down to make space for "Veteran" text
+                }
+
+                // Define healthBarX here, after all potential adjustments to healthBarY
+                const healthBarX = this.x - healthBarWidth / 2;
+
+                // Background of health bar
+                ctx.fillStyle = '#555';
+                ctx.fillRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
+
+                // Current health
+                const currentHealthWidth = (this.health / this.initialHealth) * healthBarWidth;
+                // Color health bar based on health percentage
+                ctx.fillStyle = this.health > this.initialHealth * 0.5 ? '#22c55e' : (this.health > this.initialHealth * 0.2 ? '#facc15' : '#ef4444'); // Green, Yellow, Red
+                ctx.fillRect(healthBarX, healthBarY, currentHealthWidth, healthBarHeight);
+
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 0.5;
+                ctx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
+            }
+
+            /**
+             * Updates the unit's position and handles combat logic.
+             * Units will prioritize moving towards a specific target (if set),
+             * then finding and engaging enemy units, and finally moving randomly.
+             */
+            update() {
+                if (!this.isAlive) return; // Do not update dead units
+
+                let target = null;
+                let closestDistance = Infinity;
+
+                // Priority 1: Move towards a specific target if set for the army
+                if (this.targetX !== null && this.targetY !== null) {
+                    // console.log(`Unit ${this.id} (${this.alliance} ${this.type}) moving towards commanded target: (${this.targetX.toFixed(0)}, ${this.targetY.toFixed(0)})`); // Debugging log
+                    const dx = this.targetX - this.x;
+                    const dy = this.targetY - this.y;
+                    const distanceToTarget = Math.sqrt(dx * dx + dy * dy);
+
+                    const currentTerrain = getTerrainAt(this.x, this.y);
+                    let effectiveSpeed = BASE_UNIT_SPEED * currentTerrain.movementModifier;
+                    if (this.type === 'artillery') {
+                        effectiveSpeed *= ARTILLERY_MOVEMENT_MODIFIER;
+                    }
+
+                    if (distanceToTarget > effectiveSpeed) {
+                        this.x += (dx / distanceToTarget) * effectiveSpeed;
+                        this.y += (dy / distanceToTarget) * effectiveSpeed;
+                    } else {
+                        // Arrived at destination, clear target
+                        // console.log(`Unit ${this.id} arrived at commanded target.`); // Debugging log
+                        this.x = this.targetX;
+                        this.y = this.targetY;
+                        this.targetX = null;
+                        this.targetY = null;
+                        // Once arrived, set a new random target for future random movement
+                        this.randomTargetX = Math.random() * canvas.width;
+                        this.randomTargetY = Math.random() * canvas.height;
+                    }
+                    // Do not engage enemies while moving to a specific command target
+                    return;
+                }
+
+                // Priority 2: Find the closest alive enemy unit
+                units.forEach(otherUnit => {
+                    if (otherUnit.isAlive && otherUnit.alliance !== this.alliance) {
+                        const dist = Math.sqrt(Math.pow(this.x - otherUnit.x, 2) + Math.pow(this.y - otherUnit.y, 2));
+                        if (dist < closestDistance) {
+                            closestDistance = dist;
+                            target = otherUnit;
+                        }
+                    }
+                });
+
+                const currentTerrain = getTerrainAt(this.x, this.y);
+                let effectiveSpeed = BASE_UNIT_SPEED * currentTerrain.movementModifier;
+
+                // Apply specific artillery movement modifier if it's an artillery unit
+                if (this.type === 'artillery') {
+                    effectiveSpeed *= ARTILLERY_MOVEMENT_MODIFIER;
+                }
+
+                if (target) {
+                    // An enemy is found, prioritize engaging
+                    const dx = target.x - this.x;
+                    const dy = target.y - this.y;
+                    const distanceToTarget = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distanceToTarget <= this.attackRange) {
+                        // If within attack range, attack the target
+                        // Implement cooldown for artillery
+                        if (this.type === 'artillery') {
+                            const currentTime = Date.now();
+                            if (currentTime - this.lastAttackTime < ARTILLERY_FIRE_COOLDOWN) {
+                                // On cooldown, do not attack, but still don't move
+                                return;
+                            }
+                            this.lastAttackTime = currentTime; // Update last attack time
+                        }
+
+                        const targetWasAlive = target.isAlive; // Check status BEFORE damage
+                        target.takeDamage(this.attackDamage * 0.05); // Apply a fraction of damage per frame
+
+                        // If target just died, this unit gets a kill and gains strength
+                        if (targetWasAlive && !target.isAlive) {
+                            this.kills++;
+                            this.gainStrength();
+                            updateLeaderboard(); // Update leaderboard when a unit gets a kill
+                        }
+
+                        // Visual feedback for attack: draw a temporary line
+                        ctx.save(); // Save current canvas state
+                        ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)'; // Red transparent line
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(this.x, this.y);
+                        ctx.lineTo(target.x, target.y);
+                        ctx.stroke();
+                        ctx.restore(); // Restore canvas state
+                    } else {
+                        // If not in attack range, move towards the target
+                        this.x += (dx / distanceToTarget) * effectiveSpeed;
+                        this.y += (dy / distanceToTarget) * effectiveSpeed;
+                    }
+                } else {
+                    // No enemy found, continue random movement
+                    const dx = this.randomTargetX - this.x;
+                    const dy = this.randomTargetY - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < effectiveSpeed) {
+                        // If close enough to current random target, set a new one
+                        this.x = this.randomTargetX;
+                        this.y = this.randomTargetY;
+                        this.randomTargetX = Math.random() * canvas.width;
+                        this.randomTargetY = Math.random() * canvas.height;
+                    } else {
+                        // Move towards the random target
+                        this.x += (dx / distance) * effectiveSpeed;
+                        this.y += (dy / distance) * effectiveSpeed;
+                    }
+                }
+
+                // Keep units within canvas bounds after movement
+                this.x = Math.max(this.size / 2, Math.min(canvas.width - this.size / 2, this.x));
+                this.y = Math.max(this.size / 2, Math.min(canvas.height - this.size / 2, this.y));
+            }
+        }
+
+        /**
+         * Adds a new unit to the units array and redraws the map.
+         * This function now also handles assigning the unit to an army.
+         * @param {string} type - The type of unit ('infantry', 'tank', or 'artillery').
+         * @param {string} alliance - The alliance of the unit ('friendly' or 'enemy').
+         * @param {number} x - The x-coordinate for placement.
+         * @param {number} y - The y-coordinate for placement.
+         * @returns {boolean} True if the unit was successfully added, false otherwise.
+         */
+        function addUnit(type, alliance, x, y) {
+            // Check placement based on the STATIC_BORDER for initial deployment
+            const borderY = getBorderYAtX(x);
+            if (alliance === 'friendly' && y >= borderY) {
+                // showMessageBox("Friendly units must be placed in the TOP HALF of the map (above the initial border)!");
+                return false;
+            }
+            if (alliance === 'enemy' && y < borderY) {
+                // showMessageBox("Enemy units must be placed in the BOTTOM HALF of the map (below or on the initial border)!");
+                return false;
+            }
+
+            // Get the control state of the cell at the clicked location
+            const clickedControlState = getControlStateAt(x, y);
+
+            // Prevent placing friendly units in enemy or contested territory
+            if (alliance === 'friendly' && (clickedControlState === CONTROL_STATE.ENEMY || clickedControlState === CONTROL_STATE.CONTESTED)) {
+                // showMessageBox("Cannot place friendly units in enemy or contested territory!");
+                return false;
+            }
+
+            // Prevent placing enemy units in friendly or contested territory
+            if (alliance === 'enemy' && (clickedControlState === CONTROL_STATE.FRIENDLY || clickedControlState === CONTROL_STATE.CONTESTED)) {
+                // showMessageBox("Cannot place enemy units in friendly or contested territory!");
+                return false;
+            }
+
+            // Check overall limits for friendly units (before army assignment)
+            if (alliance === 'friendly') {
+                if (type === 'infantry' && troopCounts.friendly.infantry >= MAX_FRIENDLY_INFANTRY) {
+                    // showMessageBox(`Cannot place more than ${MAX_FRIENDLY_INFANTRY} Friendly Infantry.`);
+                    return false;
+                }
+                if (type === 'tank' && troopCounts.friendly.tank >= MAX_FRIENDLY_TANKS) {
+                    // showMessageBox(`Cannot place more than ${MAX_FRIENDLY_TANKS} Friendly Tanks.`);
+                    return false;
+                }
+                if (type === 'artillery' && troopCounts.friendly.artillery >= MAX_FRIENDLY_ARTILLERY) {
+                    // showMessageBox(`Cannot place more than ${MAX_FRIENDLY_ARTILLERY} Friendly Artillery.`);
+                    return false;
+                }
+            }
+
+            let targetArmyList = alliance === 'friendly' ? friendlyArmies : enemyArmies;
+            let targetArmy = null;
+
+            // Try to find an existing army with space for this unit type
+            for (let i = 0; i < targetArmyList.length; i++) {
+                if (targetArmyList[i].hasSpace(type)) {
+                    targetArmy = targetArmyList[i];
+                    break;
+                }
+            }
+
+            // If no existing army has space, create a new one
+            if (!targetArmy) {
+                targetArmy = new Army(targetArmyList.length + 1, alliance); // Pass alliance here
+                targetArmyList.push(targetArmy);
+            }
+
+            const newUnit = new Unit(type, alliance, x, y, targetArmy.id); // Pass armyId to Unit constructor
+            targetArmy.addUnit(newUnit); // This adds unit to army and sets its armyId
+            units.push(newUnit); // Add to global units array for simulation/drawing
+
+            // Increment overall troop count
+            troopCounts[alliance][type]++;
+            updateTroopCounters();
+            updateLeaderboard(); // Update leaderboard when a new unit is added
+            updateArmySelector(); // Update the army selector dropdown
+            // updateArmyStrengthCharts(); // Removed call
+            drawMap(); // Redraw immediately after adding to show the unit
+            return true; // Unit successfully added
+        }
+
+        /**
+         * The main simulation loop. Updates unit positions, handles combat,
+         * filters out dead units, and redraws the map.
+         */
+        function simulate() {
+            if (simulationRunning) {
+                // Update all units (combat and movement logic inside Unit.update)
+                units.forEach(unit => unit.update());
+
+                // Filter out dead units from the array (this is where units are removed if health <= 0)
+                units = units.filter(unit => unit.isAlive);
+
+                // Update control map and dynamic borders after unit positions are updated
+                updateControlMap();
+                generateDynamicBorders();
+
+                drawMap(); // Redraw the map with updated positions, new borders, and remaining units
+                // updateArmyStrengthCharts(); // Removed call
+                requestAnimationFrame(simulate); // Continue the loop
+            }
+        }
+
+        /**
+         * Starts the simulation.
+         */
+        function startSimulation() {
+            if (!simulationRunning) {
+                if (units.length === 0) {
+                    showMessageBox("Please add some units to the map before starting the simulation!");
+                    return;
+                }
+                simulationRunning = true;
+                simulate();
+                showMessageBox("Simulation started! Units will now engage.");
+
+
+            } else {
+                showMessageBox("Simulation is already running.");
+            }
+            // Reset army selection when simulation starts
+            selectedArmy = { id: null, alliance: null };
+            currentMode = MODES.NORMAL;
+            updateButtonStates(); // Update all button states
+            armySelector.value = ""; // Reset dropdown
+            drawMap(); // Redraw to remove selection highlight
+        }
+
+        /**
+         * Stops the simulation.
+         */
+        function stopSimulation() {
+            if (simulationRunning) {
+                simulationRunning = false;
+                updateLeaderboard(); // Update leaderboard one last time when simulation stops
+                // updateArmyStrengthCharts(); // Removed call
+                showMessageBox("Simulation stopped.");
+            } else {
+                showMessageBox("Simulation is not running.");
+            }
+            // Reset army selection when simulation stops
+            selectedArmy = { id: null, alliance: null };
+            currentMode = MODES.NORMAL;
+            updateButtonStates(); // Update all button states
+            armySelector.value = ""; // Reset dropdown
+            drawMap(); // Redraw to remove selection highlight
+        }
+
+        /**
+         * Clears all units from the map and stops the simulation.
+         */
+        function clearMap() {
+            stopSimulation(); // Stop simulation first
+            units = []; // Clear the units array
+            friendlyArmies = []; // Clear friendly armies
+            enemyArmies = []; // Clear enemy armies
+
+            // Reset all troop counts
+            troopCounts = {
+                friendly: { infantry: 0, tank: 0, artillery: 0 },
+                enemy: { infantry: 0, tank: 0, artillery: 0 }
+            };
+            nextUnitId = 0; // Reset unit ID counter
+            updateTroopCounters(); // Update display
+            generateTerrain(); // Generate new terrain on clear
+
+            // Re-initialize control map based on static border for a fresh start
+            const numControlCols = canvas.width / CONTROL_CELL_SIZE;
+            const numControlRows = canvas.height / CONTROL_CELL_SIZE;
+            for (let r = 0; r < numControlRows; r++) {
+                controlMap[r] = [];
+                for (let c = 0; c < numControlCols; c++) {
+                    const cellCenterX = c * CONTROL_CELL_SIZE + CONTROL_CELL_SIZE / 2;
+                    const cellCenterY = r * CONTROL_CELL_SIZE + CONTROL_CELL_SIZE / 2;
+                    const borderY = getBorderYAtX(cellCenterX);
+
+                    if (cellCenterY < borderY) {
+                        controlMap[r][c] = CONTROL_STATE.FRIENDLY;
+                    } else {
+                        controlMap[r][c] = CONTROL_STATE.ENEMY;
+                    }
+                }
+            }
+
+            generateDynamicBorders(); // Regenerate dynamic borders (will reflect initial control)
+            drawMap(); // Redraw the empty map with new terrain and initial dynamic borders
+            updateLeaderboard(); // Clear leaderboard on map clear
+            showMessageBox("Map cleared and new terrain generated! Add units to start a new battle.");
+
+            // Reset army selection on clear
+            selectedArmy = { id: null, alliance: null };
+            currentMode = MODES.NORMAL;
+
+            updateButtonStates(); // Update all button states
+            updateArmySelector(); // Update the army selector dropdown
+            // updateArmyStrengthCharts(); // Removed call
+        }
+
+        /**
+         * Automatically places a specified number of enemy units of a given type.
+         * This function now uses the `addUnit` function to ensure units are assigned to armies.
+         * @param {string} type - The type of unit to place ('infantry', 'tank', or 'artillery').
+         * @param {number} count - The number of units to place.
+         */
+        function autoPlaceEnemyTroops(type, count) {
+            let placedCount = 0;
+            const maxAttemptsPerUnit = 20; // Max attempts to place a single unit
+
+            // Find strategic points for enemy placement
+            // Use a higher number of points than units to allow for distribution
+            const strategicPoints = findStrategicPlacementPoints('enemy', Math.max(1, Math.ceil(count / 3))); // At least 1 point, or one per 3 units
+
+            if (strategicPoints.length === 0) {
+                showMessageBox("No suitable strategic points found for enemy placement.");
+                return;
+            }
+
+            for (let i = 0; i < count; i++) {
+                let attempts = 0;
+                let unitPlaced = false;
+                while (!unitPlaced && attempts < maxAttemptsPerUnit) {
+                    // Pick a random strategic point to cluster around
+                    const anchorPoint = strategicPoints[Math.floor(Math.random() * strategicPoints.length)];
+
+                    // Generate a random offset from the anchor point
+                    const offsetX = (Math.random() - 0.5) * UNIT_PLACEMENT_CLUSTER_RADIUS * 2; // -radius to +radius
+                    const offsetY = (Math.random() - 0.5) * UNIT_PLACEMENT_CLUSTER_RADIUS * 2;
+
+                    let targetX = anchorPoint.x + offsetX;
+                    let targetY = anchorPoint.y + offsetY;
+
+                    // Ensure the target is within the enemy's general territory (below border)
+                    const borderY = getBorderYAtX(targetX);
+                    if (targetY < borderY) { // If it's above the border, nudge it down
+                        targetY = borderY + (Math.random() * 50); // Nudge it a bit below the border
+                    }
+
+                    // Ensure within canvas bounds
+                    targetX = Math.max(UNIT_SIZE / 2, Math.min(canvas.width - UNIT_SIZE / 2, targetX));
+                    targetY = Math.max(UNIT_SIZE / 2, Math.min(canvas.height - UNIT_SIZE / 2, targetY));
+
+                    unitPlaced = addUnit(type, 'enemy', targetX, targetY);
+                    if (unitPlaced) {
+                        placedCount++;
+                    }
+                    attempts++;
+                }
+            }
+            if (placedCount > 0) {
+                showMessageBox(`Automatically placed ${placedCount} Enemy ${type} units strategically.`);
+            } else {
+                showMessageBox(`Could not place any Enemy ${type} units strategically. Map might be full or placement is restricted.`);
+            }
+        }
+
+        /**
+         * Places a full enemy army (10 infantry, 5 tanks, 2 artillery).
+         * Each unit will be added via `addUnit`, which handles army assignment.
+         */
+        function placeFullEnemyArmy() {
+            let unitsPlacedInArmy = 0;
+            const maxAttemptsPerUnit = 20;
+
+
+            // Find strategic points for enemy placement
+            // Since this places a full army, we might want a few strategic points
+            const strategicPoints = findStrategicPlacementPoints('enemy', 3); // Aim for 3 strategic clusters
+
+            if (strategicPoints.length === 0) {
+                showMessageBox("No suitable strategic points found for enemy army placement.");
+                return;
+            }
+
+            const unitTypesToPlace = [
+                { type: 'infantry', count: AUTO_PLACE_ENEMY_INFANTRY_COUNT },
+                { type: 'tank', count: AUTO_PLACE_ENEMY_TANK_COUNT },
+                { type: 'artillery', count: AUTO_PLACE_ENEMY_ARTILLERY_COUNT }
+            ];
+
+            unitTypesToPlace.forEach(unitConfig => {
+                for (let i = 0; i < unitConfig.count; i++) {
+                    let attempts = 0;
+                    let unitPlaced = false;
+                    while (!unitPlaced && attempts < maxAttemptsPerUnit) {
+                        // Pick a random strategic point to cluster around
+                        const anchorPoint = strategicPoints[Math.floor(Math.random() * strategicPoints.length)];
+
+                        // Generate a random offset from the anchor point
+                        const offsetX = (Math.random() - 0.5) * UNIT_PLACEMENT_CLUSTER_RADIUS * 2;
+                        const offsetY = (Math.random() - 0.5) * UNIT_PLACEMENT_CLUSTER_RADIUS * 2;
+
+                        let targetX = anchorPoint.x + offsetX;
+                        let targetY = anchorPoint.y + offsetY;
+
+                        // Ensure the target is within the enemy's general territory (below border)
+                        const borderY = getBorderYAtX(targetX);
+                        if (targetY < borderY) {
+                            targetY = borderY + (Math.random() * 50);
+                        }
+
+                        // Ensure within canvas bounds
+                        targetX = Math.max(UNIT_SIZE / 2, Math.min(canvas.width - UNIT_SIZE / 2, targetX));
+                        targetY = Math.max(UNIT_SIZE / 2, Math.min(canvas.height - UNIT_SIZE / 2, targetY));
+
+                        unitPlaced = addUnit(unitConfig.type, 'enemy', targetX, targetY);
+                        if (unitPlaced) {
+                            unitsPlacedInArmy++;
+                        }
+                        attempts++;
+                    }
+                }
+            });
+
+            if (unitsPlacedInArmy > 0) {
+                showMessageBox(`A new enemy army has been placed strategically (${unitsPlacedInArmy} units)!`);
+            } else {
+                showMessageBox("Could not place any units for the enemy army strategically. Map might be full or placement is restricted.");
+            }
+        }
+
+        /**
+         * Updates the enabled/disabled state of various buttons based on simulation state and selected army.
+         */
+        function updateButtonStates() {
+            const isSimulationRunning = simulationRunning;
+            // Changed to check if ANY army is selected, not just friendly
+            const isAnyArmySelected = (selectedArmy.id !== null);
+            const hasUnits = units.length > 0;
+
+            // Placement buttons
+            document.getElementById('addFriendlyInfantryBtn').disabled = isSimulationRunning;
+            document.getElementById('addFriendlyTankBtn').disabled = isSimulationRunning;
+            document.getElementById('addFriendlyArtilleryBtn').disabled = isSimulationRunning;
+            document.getElementById('addEnemyInfantryBtn').disabled = isSimulationRunning;
+            document.getElementById('addEnemyTankBtn').disabled = isSimulationRunning;
+            document.getElementById('addEnemyArtilleryBtn').disabled = isSimulationRunning;
+            document.getElementById('autoPlaceEnemyInfantryBtn').disabled = isSimulationRunning;
+            document.getElementById('autoPlaceEnemyTankBtn').disabled = isSimulationRunning;
+            document.getElementById('autoPlaceEnemyArtilleryBtn').disabled = isSimulationRunning;
+            document.getElementById('placeEnemyArmyBtn').disabled = isSimulationRunning;
+
+            // Army control buttons
+            armySelector.disabled = isSimulationRunning;
+            // Enable move button if ANY army is selected and simulation is not running
+            moveArmyBtn.disabled = isSimulationRunning || !isAnyArmySelected;
+
+            // Simulation control buttons
+            startSimulationBtn.disabled = isSimulationRunning || !hasUnits;
+            stopSimulationBtn.disabled = !isSimulationRunning;
+            clearMapBtn.disabled = isSimulationRunning && hasUnits; // Can clear if not running, or if running but no units (edge case)
+        }
+
+        /**
+         * Populates the army selector dropdown with friendly and enemy army IDs.
+         */
+        function updateArmySelector() {
+            armySelector.innerHTML = '<option value="">-- No Army Selected --</option>'; // Clear existing options
+
+            // Add friendly armies
+            friendlyArmies.forEach(army => {
+                const aliveUnitsInArmy = units.filter(unit => unit.isAlive && unit.armyId === army.id && unit.alliance === 'friendly');
+                if (aliveUnitsInArmy.length > 0) {
+                    const option = document.createElement('option');
+                    option.value = `friendly-${army.id}`;
+                    option.textContent = `Friendly Army ${army.id}`;
+                    armySelector.appendChild(option);
+                }
+            });
+
+            // Add enemy armies
+            enemyArmies.forEach(army => {
+                const aliveUnitsInArmy = units.filter(unit => unit.isAlive && unit.armyId === army.id && unit.alliance === 'enemy');
+                if (aliveUnitsInArmy.length > 0) {
+                    const option = document.createElement('option');
+                    option.value = `enemy-${army.id}`;
+                    option.textContent = `Enemy Army ${army.id}`;
+                    armySelector.appendChild(option);
+                }
+            });
+
+            // Set the dropdown value to the currently selected army if it still exists
+            if (selectedArmy.id !== null && selectedArmy.alliance !== null) {
+                const valueToSelect = `${selectedArmy.alliance}-${selectedArmy.id}`;
+                if (Array.from(armySelector.options).some(option => option.value === valueToSelect)) {
+                    armySelector.value = valueToSelect;
+                } else {
+                    selectedArmy = { id: null, alliance: null }; // Clear selection if the army no longer exists
+                    armySelector.value = "";
+                }
+            } else {
+                armySelector.value = "";
+            }
+            updateButtonStates(); // Update button states after selector change
+            drawMap(); // Redraw to update army highlight
+        }
+
+        // Removed getArmyStrengthData function
+
+        // Removed initializeCharts function
+
+        // Removed updateArmyStrengthCharts function
+
+        // --- Event Listeners for UI ---
+
+        // Canvas click listener for placing units AND inspecting veterans AND army control
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+
+            if (simulationRunning) {
+                showMessageBox("Please stop the simulation to place units or control armies.");
+                return;
+            }
+
+            if (currentMode === MODES.PLACEMENT) {
+                const unitPlaced = addUnit(selectedUnit.type, selectedUnit.alliance, mouseX, mouseY);
+                if (!unitPlaced) {
+                    showMessageBox(`Cannot place ${selectedUnit.alliance} ${selectedUnit.type} here due to restrictions.`);
+                }
+                // Stay in placement mode until another button is clicked
+            } else if (currentMode === MODES.DESTINATION_SELECTION) {
+                console.log("Canvas click for destination selection. Selected Army:", selectedArmy); // Debugging log
+                // Allow movement for any selected army
+                if (selectedArmy.id !== null) {
+                    const targetArmyList = selectedArmy.alliance === 'friendly' ? friendlyArmies : enemyArmies;
+                    const targetArmy = targetArmyList.find(army => army.id === selectedArmy.id);
+
+                    if (targetArmy) {
+                        const unitsInSelectedArmy = units.filter(unit => unit.isAlive && unit.armyId === selectedArmy.id && unit.alliance === selectedArmy.alliance);
+                        console.log("Units in selected army for movement:", unitsInSelectedArmy.length); // Debugging log
+
+                        if (unitsInSelectedArmy.length > 0) {
+                            // Calculate a spread for the destination points
+                            const spreadRadius = 50 + (unitsInSelectedArmy.length * 2); // Larger armies spread more
+                            const angleIncrement = (Math.PI * 2) / unitsInSelectedArmy.length; // Distribute units in a circle
+
+                            unitsInSelectedArmy.forEach((unit, index) => {
+                                // Calculate a unique target point for each unit within the spread
+                                const targetOffsetAngle = angleIncrement * index;
+                                const targetOffsetX = Math.cos(targetOffsetAngle) * spreadRadius * (0.5 + Math.random() * 0.5); // Randomize distance within radius
+                                const targetOffsetY = Math.sin(targetOffsetAngle) * spreadRadius * (0.5 + Math.random() * 0.5);
+
+                                unit.targetX = mouseX + targetOffsetX;
+                                unit.targetY = mouseY + targetOffsetY;
+                                console.log(`Setting target for Unit ${unit.id}: (${unit.targetX.toFixed(0)}, ${unit.targetY.toFixed(0)})`); // Debugging log
+
+                                // Ensure target points are within canvas bounds
+                                unit.targetX = Math.max(UNIT_SIZE / 2, Math.min(canvas.width - UNIT_SIZE / 2, unit.targetX));
+                                unit.targetY = Math.max(UNIT_SIZE / 2, Math.min(canvas.height - UNIT_SIZE / 2, unit.targetY));
+                            });
+                            showMessageBox(`${selectedArmy.alliance === 'friendly' ? 'Friendly' : 'Enemy'} Army ${selectedArmy.id} is moving to the new destination! Remember to click "Start Simulation" for units to move.`);
+                        } else {
+                            showMessageBox("Selected army has no active units to move.");
+                        }
+                    }
+                } else {
+                    // This case should ideally not be reached if moveArmyBtn is properly disabled
+                    showMessageBox("No army selected for movement.");
+                }
+                selectedArmy = { id: null, alliance: null }; // Clear selection after setting destination
+                armySelector.value = ""; // Reset dropdown
+                currentMode = MODES.NORMAL; // Revert to normal mode
+                updateButtonStates();
+                drawMap(); // Redraw to remove selection highlight
+            } else { // currentMode === MODES.NORMAL
+                showMessageBox("Simulation is stopped. Select a unit type to place new troops.");
+            }
+        });
+
+
+        // Button listeners for friendly units
+        document.getElementById('addFriendlyInfantryBtn').addEventListener('click', () => {
+            selectedUnit = { type: 'infantry', alliance: 'friendly' };
+            currentMode = MODES.PLACEMENT;
+            showMessageBox("Click on the TOP HALF of the map to place Friendly Infantry units.");
+            selectedArmy = { id: null, alliance: null }; // Clear army selection
+            updateButtonStates();
+            armySelector.value = ""; // Reset dropdown
+            drawMap(); // Redraw to remove army selection highlight
+        });
+
+        document.getElementById('addFriendlyTankBtn').addEventListener('click', () => {
+            selectedUnit = { type: 'tank', alliance: 'friendly' };
+            currentMode = MODES.PLACEMENT;
+            showMessageBox("Click on the TOP HALF of the map to place Friendly Tank units.");
+            selectedArmy = { id: null, alliance: null }; // Clear army selection
+            updateButtonStates();
+            armySelector.value = ""; // Reset dropdown
+            drawMap(); // Redraw to remove army selection highlight
+        });
+
+        document.getElementById('addFriendlyArtilleryBtn').addEventListener('click', () => {
+            selectedUnit = { type: 'artillery', alliance: 'friendly' };
+            currentMode = MODES.PLACEMENT;
+            showMessageBox("Click on the TOP HALF of the map to place Friendly Artillery units.");
+            selectedArmy = { id: null, alliance: null }; // Clear army selection
+            updateButtonStates();
+            armySelector.value = ""; // Reset dropdown
+            drawMap(); // Redraw to remove army selection highlight
+        });
+
+        // New button listeners for chosen enemy placement
+        document.getElementById('addEnemyInfantryBtn').addEventListener('click', () => {
+            selectedUnit = { type: 'infantry', alliance: 'enemy' };
+            currentMode = MODES.PLACEMENT;
+            showMessageBox("Click on the BOTTOM HALF of the map to place Enemy Infantry units.");
+            selectedArmy = { id: null, alliance: null }; // Clear army selection
+            updateButtonStates();
+            armySelector.value = ""; // Reset dropdown
+            drawMap(); // Redraw to remove army selection highlight
+        });
+
+        document.getElementById('addEnemyTankBtn').addEventListener('click', () => {
+            selectedUnit = { type: 'tank', alliance: 'enemy' };
+            currentMode = MODES.PLACEMENT;
+            showMessageBox("Click on the BOTTOM HALF of the map to place Enemy Tank units.");
+            selectedArmy = { id: null, alliance: null }; // Clear army selection
+            updateButtonStates();
+            armySelector.value = ""; // Reset dropdown
+            drawMap(); // Redraw to remove army selection highlight
+        });
+
+        document.getElementById('addEnemyArtilleryBtn').addEventListener('click', () => {
+            selectedUnit = { type: 'artillery', alliance: 'enemy' };
+            currentMode = MODES.PLACEMENT;
+            showMessageBox("Click on the BOTTOM HALF of the map to place Enemy Artillery units.");
+            selectedArmy = { id: null, alliance: null }; // Clear army selection
+            updateButtonStates();
+            armySelector.value = ""; // Reset dropdown
+            drawMap(); // Redraw to remove army selection highlight
+        });
+
+
+        // Button listeners for automatic enemy placement
+        document.getElementById('autoPlaceEnemyInfantryBtn').addEventListener('click', () => {
+            autoPlaceEnemyTroops('infantry', AUTO_PLACE_ENEMY_INFANTRY_COUNT);
+            currentMode = MODES.NORMAL; // Revert to normal mode
+            selectedArmy = { id: null, alliance: null }; // Clear army selection
+            updateButtonStates();
+            armySelector.value = ""; // Reset dropdown
+            drawMap(); // Redraw to remove army selection highlight
+        });
+
+        document.getElementById('autoPlaceEnemyTankBtn').addEventListener('click', () => {
+            autoPlaceEnemyTroops('tank', AUTO_PLACE_ENEMY_TANK_COUNT);
+            currentMode = MODES.NORMAL; // Revert to normal mode
+            selectedArmy = { id: null, alliance: null }; // Clear army selection
+            updateButtonStates();
+            armySelector.value = ""; // Reset dropdown
+            drawMap(); // Redraw to remove army selection highlight
+        });
+
+        document.getElementById('autoPlaceEnemyArtilleryBtn').addEventListener('click', () => {
+            autoPlaceEnemyTroops('artillery', AUTO_PLACE_ENEMY_ARTILLERY_COUNT);
+            currentMode = MODES.NORMAL; // Revert to normal mode
+            selectedArmy = { id: null, alliance: null }; // Clear army selection
+            updateButtonStates();
+            armySelector.value = ""; // Reset dropdown
+            drawMap(); // Redraw to remove army selection highlight
+        });
+
+        // New button for placing a full enemy army
+        document.getElementById('placeEnemyArmyBtn').addEventListener('click', () => {
+            placeFullEnemyArmy();
+            currentMode = MODES.NORMAL; // Revert to normal mode
+            selectedArmy = { id: null, alliance: null }; // Clear army selection
+            updateButtonStates();
+            armySelector.value = ""; // Reset dropdown
+            drawMap(); // Redraw to remove army selection highlight
+        });
+
+        // Army selector dropdown listener
+        armySelector.addEventListener('change', () => {
+            if (simulationRunning) {
+                showMessageBox("Please stop the simulation to select an army.");
+                armySelector.value = ""; // Reset dropdown if simulation is running
+                selectedArmy = { id: null, alliance: null }; // Ensure selectedArmy is reset
+                updateButtonStates();
+                drawMap();
+                return;
+            }
+            const selectedValue = armySelector.value;
+            if (selectedValue === "") {
+                selectedArmy = { id: null, alliance: null };
+                showMessageBox("No army selected.");
+            } else {
+                const [alliance, id] = selectedValue.split('-');
+                selectedArmy = { id: parseInt(id), alliance: alliance };
+                showMessageBox(`${alliance === 'friendly' ? 'Friendly' : 'Enemy'} Army ${id} selected!`);
+            }
+            console.log("Army selector changed. selectedArmy:", selectedArmy); // Debugging log
+            currentMode = MODES.NORMAL; // Always go back to normal mode after selection
+            updateButtonStates();
+            drawMap(); // Redraw to show selection highlight
+        });
+
+        // The 'Move Selected Army' button still triggers the destination selection mode
+        moveArmyBtn.addEventListener('click', () => {
+            console.log("Move Selected Army button clicked. Current selectedArmy:", selectedArmy, "Current Mode:", currentMode); // Debugging log
+            if (simulationRunning) {
+                showMessageBox("Please stop the simulation to move an army.");
+                return;
+            }
+            // Allow movement for any selected army
+            if (selectedArmy.id === null) {
+                showMessageBox("No army selected. Please select an army from the dropdown first.");
+                return;
+            }
+            currentMode = MODES.DESTINATION_SELECTION;
+            selectedUnit = null; // Clear any unit placement selection
+            updateButtonStates();
+            showMessageBox(`${selectedArmy.alliance === 'friendly' ? 'Friendly' : 'Enemy'} Army ${selectedArmy.id} selected. Click on the map to set its new destination. Remember to click "Start Simulation" for units to move.`);
+        });
+
+        document.getElementById('startSimulationBtn').addEventListener('click', startSimulation);
+        document.getElementById('stopSimulationBtn').addEventListener('click', stopSimulation);
+        document.getElementById('clearMapBtn').addEventListener('click', clearMap);
+
+        // Initial setup when the page loads
+        window.onload = function() {
+            console.log("Window loaded. Initializing map and controls.");
+            generateTerrain(); // Generate terrain on initial load
+
+            // Initialize control map based on the static border for a fresh start
+            const numControlCols = canvas.width / CONTROL_CELL_SIZE;
+            const numControlRows = canvas.height / CONTROL_CELL_SIZE;
+            controlMap = Array(numControlRows).fill(0).map(() => Array(numControlCols).fill(CONTROL_STATE.NEUTRAL)); // Initialize with neutral state
+            console.log("Control map initialized to neutral.");
+
+            for (let r = 0; r < numControlRows; r++) {
+                for (let c = 0; c < numControlCols; c++) {
+                    const cellCenterX = c * CONTROL_CELL_SIZE + CONTROL_CELL_SIZE / 2;
+                    const cellCenterY = r * CONTROL_CELL_SIZE + CONTROL_CELL_SIZE / 2;
+                    const borderY = getBorderYAtX(cellCenterX);
+
+                    if (cellCenterY < borderY) {
+                        controlMap[r][c] = CONTROL_STATE.FRIENDLY;
+                    } else {
+                        controlMap[r][c] = CONTROL_STATE.ENEMY;
+                    }
+                }
+            }
+            console.log("Control map populated based on initial border.");
+
+            generateDynamicBorders(); // Regenerate dynamic borders (will reflect initial control)
+            drawMap();
+            updateTroopCounters(); // Initialize counters on load
+            updateLeaderboard(); // Initialize leaderboard on load
+            updateArmySelector(); // Populate and initialize army selector
+            updateButtonStates(); // Initialize all button states
+            // initializeCharts(); // Removed call
+            // updateArmyStrengthCharts(); // Removed call
+            showMessageBox("Welcome to Army Map Simulator! Place units and start the simulation.");
+            console.log("Initial setup complete.");
+        };
+    </script>
+</body>
+</html>
