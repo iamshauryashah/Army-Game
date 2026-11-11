@@ -462,126 +462,246 @@
         const MIN_DISTANCE_BETWEEN_STRATEGIC_POINTS = 150; // For strategic point generation
 
 
-        // Terrain types with their drawing functions and properties
+        // Terrain drawing helpers for a more realistic-looking map
+        function terrainNoise(x, y, seed = 0) {
+            const value = Math.sin((x + 13.17 + seed * 7.3) * 12.9898 + (y + 4.91 + seed * 3.1) * 78.233) * 43758.5453;
+            return value - Math.floor(value);
+        }
+
+        function drawGrassTuft(ctx, x, y, length, lean) {
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + lean, y - length);
+            ctx.lineTo(x + lean * 0.35, y - length * 0.7);
+            ctx.stroke();
+        }
+
+        function fillCircle(ctx, x, y, radius, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawTree(ctx, x, y, scale, canopyColor, trunkColor) {
+            ctx.fillStyle = trunkColor;
+            ctx.fillRect(x - scale * 0.12, y + scale * 0.2, scale * 0.24, scale * 0.58);
+            fillCircle(ctx, x, y + scale * 0.08, scale * 0.5, canopyColor);
+            fillCircle(ctx, x - scale * 0.28, y + scale * 0.18, scale * 0.34, canopyColor);
+            fillCircle(ctx, x + scale * 0.28, y + scale * 0.18, scale * 0.34, canopyColor);
+        }
+
+        // Terrain types with richer shading and texture for a more realistic-looking map
         const TERRAIN_TYPES = {
             PLAINS: {
                 id: 'plains',
-                color: '#d4edc8', // Light green
+                color: '#b7c987',
                 movementModifier: 1.0,
                 defenseBonus: 0.0,
                 draw: function(ctx, x, y, size) {
-                    ctx.fillStyle = this.color;
+                    const gradient = ctx.createLinearGradient(x, y, x + size, y + size);
+                    gradient.addColorStop(0, '#c8d99c');
+                    gradient.addColorStop(0.6, '#b8ca86');
+                    gradient.addColorStop(1, '#9fb56a');
+                    ctx.fillStyle = gradient;
                     ctx.fillRect(x, y, size, size);
-                    // Optional: add subtle texture
-                    ctx.fillStyle = 'rgba(0,0,0,0.05)';
-                    ctx.fillRect(x + Math.random() * size / 2, y + Math.random() * size / 2, 2, 2);
+
+                    for (let i = 0; i < 18; i++) {
+                        const px = x + terrainNoise(x, y, i) * size;
+                        const py = y + terrainNoise(y, x, i + 1) * size;
+                        const tuftLength = 2 + terrainNoise(px, py, i + 2) * 4;
+                        ctx.strokeStyle = terrainNoise(px, py, i + 3) > 0.5 ? 'rgba(76, 110, 46, 0.42)' : 'rgba(153, 177, 91, 0.38)';
+                        ctx.lineWidth = 1;
+                        drawGrassTuft(ctx, px, py + 2, tuftLength, (terrainNoise(px, py, i + 4) - 0.5) * 3);
+                    }
+
+                    for (let i = 0; i < 4; i++) {
+                        const patchX = x + terrainNoise(x, y, i + 20) * size;
+                        const patchY = y + terrainNoise(y, x, i + 22) * size;
+                        fillCircle(ctx, patchX, patchY, 4 + terrainNoise(patchX, patchY, i) * 6, 'rgba(170, 186, 112, 0.18)');
+                    }
                 }
             },
             FOREST: {
                 id: 'forest',
-                color: '#4CAF50', // Medium green
-                movementModifier: 0.6, // Slower
-                defenseBonus: 0.15, // Good defense
+                color: '#4b7740',
+                movementModifier: 0.6,
+                defenseBonus: 0.15,
                 draw: function(ctx, x, y, size) {
-                    ctx.fillStyle = this.color;
+                    const gradient = ctx.createLinearGradient(x, y, x, y + size);
+                    gradient.addColorStop(0, '#5a8748');
+                    gradient.addColorStop(1, '#2e4e2c');
+                    ctx.fillStyle = gradient;
                     ctx.fillRect(x, y, size, size);
-                    // Draw stylized trees
-                    ctx.fillStyle = '#2E8B57'; // Darker green for trees
-                    const treeSize = size / 3;
-                    ctx.beginPath();
-                    ctx.moveTo(x + size / 2, y + treeSize / 2);
-                    ctx.lineTo(x + size / 2 - treeSize, y + size - treeSize / 2);
-                    ctx.lineTo(x + size / 2 + treeSize, y + size - treeSize / 2);
-                    ctx.closePath();
-                    ctx.fill();
 
-                    ctx.beginPath();
-                    ctx.moveTo(x + size / 2, y + size / 2 + treeSize / 4);
-                    ctx.lineTo(x + size / 2 - treeSize * 0.7, y + size - treeSize / 4);
-                    ctx.lineTo(x + size / 2 + treeSize * 0.7, y + size - treeSize / 4);
-                    ctx.closePath();
-                    ctx.fill();
+                    ctx.fillStyle = 'rgba(23, 45, 20, 0.18)';
+                    for (let i = 0; i < 3; i++) {
+                        fillCircle(ctx, x + size * (0.18 + i * 0.28), y + size * (0.18 + terrainNoise(x, y, i) * 0.45), size * (0.18 + i * 0.03), 'rgba(23, 45, 20, 0.14)');
+                    }
+
+                    const treeCount = 5;
+                    for (let i = 0; i < treeCount; i++) {
+                        const tx = x + 8 + terrainNoise(x, y, i + 30) * (size - 16);
+                        const ty = y + 7 + terrainNoise(y, x, i + 40) * (size - 18);
+                        const scale = 8 + terrainNoise(tx, ty, i + 50) * 6;
+                        drawTree(ctx, tx, ty, scale, terrainNoise(tx, ty, i + 60) > 0.5 ? '#244b28' : '#2f5f34', '#4d3422');
+                    }
                 }
             },
             MOUNTAIN: {
                 id: 'mountain',
-                color: '#8B4513', // SaddleBrown
-                movementModifier: 0.3, // Very slow
-                defenseBonus: 0.30, // High defense
+                color: '#7f7d79',
+                movementModifier: 0.3,
+                defenseBonus: 0.30,
                 draw: function(ctx, x, y, size) {
-                    ctx.fillStyle = '#A9A9A9'; // DarkGray for peaks
-                    ctx.fillRect(x, y, size, size); // Base color
-                    ctx.beginPath();
-                    ctx.moveTo(x, y + size);
-                    ctx.lineTo(x + size / 2, y);
-                    ctx.lineTo(x + size, y + size);
-                    ctx.closePath();
-                    ctx.fill();
+                    const gradient = ctx.createLinearGradient(x, y, x, y + size);
+                    gradient.addColorStop(0, '#b9b4ad');
+                    gradient.addColorStop(0.55, '#8d877f');
+                    gradient.addColorStop(1, '#655f58');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(x, y, size, size);
 
-                    ctx.fillStyle = '#696969'; // DimGray for shadows
-                    ctx.beginPath();
-                    ctx.moveTo(x + size / 2, y);
-                    ctx.lineTo(x + size, y + size);
-                    ctx.lineTo(x + size * 0.75, y + size);
-                    ctx.closePath();
-                    ctx.fill();
+                    const peaks = [
+                        { px: x + size * 0.18, py: y + size * 0.82, topX: x + size * 0.38, topY: y + size * 0.18 },
+                        { px: x + size * 0.28, py: y + size * 0.9, topX: x + size * 0.58, topY: y + size * 0.05 },
+                        { px: x + size * 0.5, py: y + size * 0.88, topX: x + size * 0.82, topY: y + size * 0.28 }
+                    ];
+
+                    peaks.forEach((peak, idx) => {
+                        ctx.fillStyle = idx === 1 ? '#8e8881' : '#79736d';
+                        ctx.beginPath();
+                        ctx.moveTo(peak.px, peak.py);
+                        ctx.lineTo(peak.topX, peak.topY);
+                        ctx.lineTo(peak.px + size * 0.3, peak.py);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        ctx.fillStyle = 'rgba(60, 60, 60, 0.26)';
+                        ctx.beginPath();
+                        ctx.moveTo(peak.topX, peak.topY);
+                        ctx.lineTo(peak.px + size * 0.3, peak.py);
+                        ctx.lineTo(peak.px + size * 0.2, peak.py);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        ctx.fillStyle = 'rgba(242, 242, 240, 0.85)';
+                        ctx.beginPath();
+                        ctx.moveTo(peak.topX, peak.topY);
+                        ctx.lineTo(peak.topX - size * 0.06, peak.topY + size * 0.1);
+                        ctx.lineTo(peak.topX + size * 0.07, peak.topY + size * 0.12);
+                        ctx.closePath();
+                        ctx.fill();
+                    });
                 }
             },
             SWAMP: {
                 id: 'swamp',
-                color: '#556B2F', // DarkOliveGreen
-                movementModifier: 0.4, // Slow
-                defenseBonus: 0.05, // Minor defense
+                color: '#55623a',
+                movementModifier: 0.4,
+                defenseBonus: 0.05,
                 draw: function(ctx, x, y, size) {
-                    ctx.fillStyle = this.color;
+                    const gradient = ctx.createLinearGradient(x, y, x + size, y + size);
+                    gradient.addColorStop(0, '#6a7547');
+                    gradient.addColorStop(1, '#3f492b');
+                    ctx.fillStyle = gradient;
                     ctx.fillRect(x, y, size, size);
-                    // Draw murky water ripples
-                    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.arc(x + size * 0.3, y + size * 0.4, size * 0.1, 0, Math.PI * 2);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.arc(x + size * 0.7, y + size * 0.6, size * 0.15, 0, Math.PI * 2);
-                    ctx.stroke();
+
+                    for (let i = 0; i < 3; i++) {
+                        const poolX = x + size * (0.22 + 0.24 * i) + (terrainNoise(x, y, i + 70) - 0.5) * 6;
+                        const poolY = y + size * (0.32 + terrainNoise(y, x, i + 75) * 0.32);
+                        ctx.fillStyle = 'rgba(76, 94, 73, 0.7)';
+                        ctx.beginPath();
+                        ctx.ellipse(poolX, poolY, size * 0.12, size * 0.08, terrainNoise(poolX, poolY, i) * Math.PI, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(167, 183, 117, 0.28)';
+                        ctx.stroke();
+                    }
+
+                    ctx.strokeStyle = 'rgba(154, 173, 99, 0.5)';
+                    for (let i = 0; i < 9; i++) {
+                        const reedX = x + 6 + terrainNoise(x, y, i + 80) * (size - 12);
+                        const reedY = y + 10 + terrainNoise(y, x, i + 90) * (size - 10);
+                        ctx.lineWidth = 1;
+                        drawGrassTuft(ctx, reedX, reedY, 5 + terrainNoise(reedX, reedY, i + 100) * 6, (terrainNoise(reedX, reedY, i + 110) - 0.5) * 2);
+                    }
                 }
             },
             RIVER: {
                 id: 'river',
-                color: '#6495ED', // CornflowerBlue
-                movementModifier: 0.07, // 7% speed
-                defenseBonus: -0.20, // -20% defense
+                color: '#5f8fc1',
+                movementModifier: 0.07,
+                defenseBonus: -0.20,
                 draw: function(ctx, x, y, size) {
-                    ctx.fillStyle = this.color;
+                    const water = ctx.createLinearGradient(x, y, x + size, y + size);
+                    water.addColorStop(0, '#7fb2df');
+                    water.addColorStop(0.5, '#4e86bc');
+                    water.addColorStop(1, '#376b9b');
+                    ctx.fillStyle = water;
                     ctx.fillRect(x, y, size, size);
-                    // Add subtle flow lines
-                    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.moveTo(x, y + size * 0.2);
-                    ctx.lineTo(x + size, y + size * 0.3);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.moveTo(x, y + size * 0.7);
-                    ctx.lineTo(x + size, y + size * 0.8);
-                    ctx.stroke();
+
+                    ctx.fillStyle = 'rgba(227, 214, 172, 0.22)';
+                    ctx.fillRect(x, y, size, 3);
+                    ctx.fillRect(x, y + size - 3, size, 3);
+
+                    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+                    ctx.lineWidth = 1.4;
+                    for (let i = 0; i < 3; i++) {
+                        ctx.beginPath();
+                        const startY = y + size * (0.2 + i * 0.25);
+                        ctx.moveTo(x, startY);
+                        ctx.bezierCurveTo(x + size * 0.25, startY - 2, x + size * 0.65, startY + 4, x + size, startY);
+                        ctx.stroke();
+                    }
+
+                    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                    for (let i = 0; i < 4; i++) {
+                        fillCircle(ctx, x + terrainNoise(x, y, i + 120) * size, y + terrainNoise(y, x, i + 130) * size, 1.2 + terrainNoise(x, y, i + 140) * 1.5, 'rgba(255,255,255,0.2)');
+                    }
                 }
             },
             CITY: {
                 id: 'city',
-                color: '#B0C4DE', // LightSteelBlue
-                movementModifier: 0.9, // Slightly slower due to urban environment
-                defenseBonus: 0.20, // Good defense
+                color: '#aab3b8',
+                movementModifier: 0.9,
+                defenseBonus: 0.20,
                 draw: function(ctx, x, y, size) {
-                    ctx.fillStyle = this.color;
+                    const gradient = ctx.createLinearGradient(x, y, x, y + size);
+                    gradient.addColorStop(0, '#cfd6d9');
+                    gradient.addColorStop(1, '#98a4aa');
+                    ctx.fillStyle = gradient;
                     ctx.fillRect(x, y, size, size);
-                    // Draw simple buildings
-                    ctx.fillStyle = '#778899'; // LightSlateGray
-                    const buildingWidth = size / 4;
-                    const buildingHeight = size / 3;
-                    ctx.fillRect(x + size * 0.1, y + size - buildingHeight, buildingWidth, buildingHeight);
-                    ctx.fillRect(x + size * 0.5, y + size - buildingHeight * 1.5, buildingWidth, buildingHeight * 1.5);
-                    ctx.fillRect(x + size * 0.7, y + size - buildingHeight * 0.8, buildingWidth, buildingHeight * 0.8);
+
+                    ctx.fillStyle = 'rgba(90, 96, 103, 0.28)';
+                    ctx.fillRect(x + size * 0.44, y, size * 0.12, size);
+                    ctx.fillRect(x, y + size * 0.44, size, size * 0.12);
+                    ctx.fillStyle = 'rgba(224, 218, 188, 0.58)';
+                    ctx.fillRect(x + size * 0.475, y, size * 0.05, size);
+                    ctx.fillRect(x, y + size * 0.475, size, size * 0.05);
+
+                    const buildings = [
+                        [0.09, 0.18, 0.18, 0.24],
+                        [0.66, 0.14, 0.18, 0.28],
+                        [0.14, 0.62, 0.22, 0.18],
+                        [0.62, 0.64, 0.18, 0.16]
+                    ];
+                    buildings.forEach((b, i) => {
+                        const bx = x + size * b[0];
+                        const by = y + size * b[1];
+                        const bw = size * b[2];
+                        const bh = size * b[3];
+                        ctx.fillStyle = i % 2 === 0 ? '#6e7b84' : '#8a959d';
+                        ctx.fillRect(bx, by, bw, bh);
+                        ctx.fillStyle = 'rgba(220, 230, 235, 0.48)';
+                        const rows = Math.max(2, Math.floor(bh / 6));
+                        const cols = Math.max(2, Math.floor(bw / 6));
+                        for (let r = 0; r < rows; r++) {
+                            for (let c = 0; c < cols; c++) {
+                                const wx = bx + 2 + c * ((bw - 4) / cols);
+                                const wy = by + 2 + r * ((bh - 4) / rows);
+                                ctx.fillRect(wx, wy, 1.5, 1.5);
+                            }
+                        }
+                    });
                 }
             }
         };
