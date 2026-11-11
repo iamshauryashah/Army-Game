@@ -283,6 +283,7 @@
         .reference-card { background: #fff; border: 1px solid #dbe3ed; border-radius: 14px; padding: 18px; box-shadow: 0 3px 12px rgba(15,23,42,.055); }
         .reference-card h4 { font-size: 1.1rem; font-weight: 750; display:flex; align-items:center; gap: 9px; margin-bottom: 12px; }
         .reference-swatch { width: 17px; height: 17px; border-radius: 5px; border: 1px solid #64748b66; display: inline-block; flex-shrink: 0; }
+        .terrain-preview { width: 46px; height: 46px; border-radius: 10px; border: 1px solid #64748b55; box-shadow: inset 0 1px 1px rgba(255,255,255,0.4), 0 2px 6px rgba(15,23,42,0.08); flex-shrink: 0; background: #d8dee4; }
         .reference-stats { display:grid; grid-template-columns: 1fr auto; gap: 8px 12px; font-size: .94rem; }
         .reference-stats dt { color: #64748b; } .reference-stats dd { font-weight: 750; text-align:right; }
         .reference-note { margin-top: 12px; font-size: .85rem; color: #475569; line-height: 1.5; }
@@ -1479,6 +1480,65 @@
         /**
          * Clears the canvas and redraws all alive units.
          */
+        function drawTerrainTransitions() {
+            const numCols = canvas.width / TERRAIN_CELL_SIZE;
+            const numRows = canvas.height / TERRAIN_CELL_SIZE;
+            ctx.save();
+            ctx.lineWidth = 1.2;
+            ctx.strokeStyle = 'rgba(33, 41, 52, 0.14)';
+            for (let r = 0; r < numRows; r++) {
+                for (let c = 0; c < numCols; c++) {
+                    const terrain = terrainMap[r][c];
+                    const x = c * TERRAIN_CELL_SIZE;
+                    const y = r * TERRAIN_CELL_SIZE;
+                    if (c + 1 < numCols && terrainMap[r][c + 1].id !== terrain.id) {
+                        ctx.beginPath();
+                        ctx.moveTo(x + TERRAIN_CELL_SIZE, y + 3);
+                        ctx.lineTo(x + TERRAIN_CELL_SIZE, y + TERRAIN_CELL_SIZE - 3);
+                        ctx.stroke();
+                    }
+                    if (r + 1 < numRows && terrainMap[r + 1][c].id !== terrain.id) {
+                        ctx.beginPath();
+                        ctx.moveTo(x + 3, y + TERRAIN_CELL_SIZE);
+                        ctx.lineTo(x + TERRAIN_CELL_SIZE - 3, y + TERRAIN_CELL_SIZE);
+                        ctx.stroke();
+                    }
+                }
+            }
+            ctx.restore();
+        }
+
+        function drawMapAtmosphere() {
+            ctx.save();
+            const light = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            light.addColorStop(0, 'rgba(255,255,255,0.12)');
+            light.addColorStop(0.45, 'rgba(255,255,255,0.03)');
+            light.addColorStop(1, 'rgba(26,32,44,0.10)');
+            ctx.fillStyle = light;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const vignette = ctx.createRadialGradient(canvas.width * 0.45, canvas.height * 0.35, canvas.width * 0.2, canvas.width * 0.45, canvas.height * 0.35, canvas.width * 0.78);
+            vignette.addColorStop(0, 'rgba(255,255,255,0)');
+            vignette.addColorStop(1, 'rgba(15,23,42,0.12)');
+            ctx.fillStyle = vignette;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+        }
+
+        function renderTerrainPreviewTiles() {
+            document.querySelectorAll('.terrain-preview').forEach(previewCanvas => {
+                const terrainKey = previewCanvas.dataset.terrainKey;
+                const terrain = TERRAIN_TYPES[terrainKey];
+                if (!terrain) return;
+                const previewCtx = previewCanvas.getContext('2d');
+                previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+                terrain.draw(previewCtx, 0, 0, previewCanvas.width, previewCanvas.height);
+                previewCtx.strokeStyle = 'rgba(255,255,255,0.28)';
+                previewCtx.lineWidth = 1;
+                previewCtx.strokeRect(0.5, 0.5, previewCanvas.width - 1, previewCanvas.height - 1);
+            });
+        }
+
         function drawMap() {
             console.log("drawMap called.");
             // Draw terrain first
@@ -1488,23 +1548,24 @@
             for (let r = 0; r < numRows; r++) {
                 for (let c = 0; c < numCols; c++) {
                     const terrain = terrainMap[r][c];
-                    // Call the draw method defined in each terrain type object
                     try {
                         terrain.draw(ctx, c * TERRAIN_CELL_SIZE, r * TERRAIN_CELL_SIZE, TERRAIN_CELL_SIZE);
                     } catch (error) {
                         console.error(`Error drawing terrain at [${r}, ${c}] (type: ${terrain.id}):`, error);
-                        // Fallback: draw a default plain color to indicate an issue
                         ctx.fillStyle = 'red';
                         ctx.fillRect(c * TERRAIN_CELL_SIZE, r * TERRAIN_CELL_SIZE, TERRAIN_CELL_SIZE, TERRAIN_CELL_SIZE);
                     }
                 }
             }
 
+            drawTerrainTransitions();
+            drawMapAtmosphere();
+
             // Draw territory overlay AFTER terrain but BEFORE borders and units
             drawTerritoryOverlay();
 
             // Draw dynamic borders on top of terrain and territory overlay
-            generateDynamicBorders(); // Call the function to generate and draw borders
+            generateDynamicBorders();
 
             // Then redraw only alive units on top of everything
             units.forEach(unit => unit.draw(ctx));
@@ -1512,13 +1573,18 @@
             // Draw army boxes after units so they are on top
             drawArmyBoxes();
 
-            // Draw named features
+            // Draw named features with a subtle halo for readability
             namedFeatures.forEach(feature => {
-                ctx.fillStyle = '#333333'; // Dark gray for text
+                ctx.save();
                 ctx.font = 'bold 14px Inter';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = 'rgba(255,255,255,0.72)';
+                ctx.strokeText(feature.name, feature.x, feature.y);
+                ctx.fillStyle = '#24303f';
                 ctx.fillText(feature.name, feature.x, feature.y);
+                ctx.restore();
             });
             console.log("drawMap finished.");
         }
@@ -2468,13 +2534,14 @@
             document.getElementById('terrainReferenceCards').innerHTML = Object.entries(TERRAIN_TYPES).map(([key, terrain]) => {
                 const bonus = Math.round(terrain.defenseBonus * 100);
                 const defense = bonus > 0 ? '+' + bonus + '% (less damage)' : bonus < 0 ? bonus + '% (more damage)' : '0%';
-                return '<article class="reference-card"><h4><span class="reference-swatch" style="background:' + terrain.color + '"></span>' + terrainNames[key] + '</h4>' +
+                return '<article class="reference-card"><h4><canvas class="terrain-preview" data-terrain-key="' + key + '" width="46" height="46" aria-hidden="true"></canvas>' + terrainNames[key] + '</h4>' +
                     '<dl class="reference-stats">' + addStats([
                         ['Movement speed', Math.round(terrain.movementModifier * 100) + '% of normal'],
                         ['Defense bonus', defense],
                         ['Damage received', Math.round((1 - terrain.defenseBonus) * 100) + '% of normal']
                     ]) + '</dl><p class="reference-note">' + descriptions[key] + '</p></article>';
             }).join('');
+            renderTerrainPreviewTiles();
         }
 
         window.onload = function() {
